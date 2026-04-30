@@ -109,6 +109,35 @@
 - 반영 여부: 전부 반영
 - 검증 로그: VALIDATION_LOG.md #19
 
+### 2026-04-30 | (사용자 직접 웹 검색, AI 결과 검증 보조) | 동순
+- 목적: 데이터 수집 1차 시도에서 발견된 5개 변수 문제의 근본 원인 조사 — `us_hy_oas` FRED 부분 수집, `kr_cpi_core` ECOS 빈 응답, `kr_mfg_bsi_outlook` ECOS 빈 응답
+- 입력한 요청: (사용자가 외부 웹 검색으로 직접 조사. AI 는 발견 결과를 정리·반영)
+- 받은 결과 요약:
+  - **us_hy_oas (BAMLH0A0HYM2)**: ICE Data Indices 가 2026-04 부터 FRED 의 모든 OAS 시리즈를 3년치만 공개로 변경. 메타데이터는 1996-12-31 부터 표시되지만 실제 ALFRED revisions 는 2023-04-28 부터만 접근 가능. **대안: BAA10Y** (Moody's Baa - 10Y Treasury, 1986~). 신용위험 시그널로 동등 (상관 0.9+).
+  - **kr_cpi_core**: ECOS 901Y009 는 기본분류라서 근원 CPI 가 없음. **901Y010 (특수분류)** 통계표가 별도 존재. 통계청 공식 한국식 근원 CPI = "농산물 및 석유류 제외 지수" (458개 품목 중 401개로 작성).
+  - **kr_mfg_bsi_outlook**: ECOS StatisticSearch API 는 `.../통계코드/주기/시작/종료/ITEM_CODE1/ITEM_CODE2/...` 형식으로 다단계 ITEM_CODE 지원. StatisticItemList 의 LVL/P_ITEM_CODE 필드로 구조 파악 가능.
+- 반영 여부: **3개 모두 반영** + 추가 검증으로 정확한 코드 확정 (`901Y010/QB`, `512Y014/C0000/BA`, `BAA10Y`)
+- 검증 로그: VALIDATION_LOG.md #20
+
+### 2026-04-30 | Claude (Opus 4.7) | 동순
+- 목적: 사용자 발견을 반영한 데이터 수집 스크립트 패치 + 검증 + 재수집
+- 입력한 요청: "이렇다는데? ... 진행해줘"
+- 받은 결과 요약: 
+  - ECOS 검증 보강 스크립트로 `901Y010` 통계표 1000개 항목 탐색 → `QB` (농산물및석유류제외지수) 발견
+  - `512Y014` LVL 구조 분석 → 분류(C0000=제조업) + 지표(BA=업황전망) 다단계 확인
+  - `02_collect_data.py` ECOS_VARIABLES 수정: `kr_cpi_core` → `901Y010/QB`, `kr_mfg_bsi_outlook` → `512Y014/C0000/BA`
+  - FRED_VARIABLES 수정: `us_hy_oas (BAMLH0A0HYM2)` → `us_credit_spread (BAA10Y)`, `dxy (DTWEXBGS)` 신규 추가
+  - 재수집: 28.1초, 23개 변수 모두 ✅, shape (4174, 24)
+- 반영 여부: 전부 반영
+- 검증 로그: VALIDATION_LOG.md #21
+
+### 2026-04-30 | Claude (Opus 4.7) | 동순
+- 목적: 1차 수집 시 발견된 ECOS 변수 매핑 버그 수정 (사용자 검증 → AI 적용)
+- 입력한 요청: (검증 스크립트 결과 분석 → 자동 수정)
+- 받은 결과 요약: ECOS 검증으로 `kr_cd_91d` (010150000) 가 사실은 KORIBOR 3개월이고 실제 CD 91일은 010502000 임을 발견. `kr_corp_aa3y` (010320000) 는 사실 회사채 BBB- 이고 실제 AA- 는 010300000 임을 발견. v1 스크립트의 잠재 버그 — 검증 안 했으면 모델이 엉뚱한 변수로 학습할 뻔.
+- 반영 여부: 전부 반영
+- 검증 로그: VALIDATION_LOG.md #22
+
 <!--
 이후 항목은 아래 템플릿 복사해서 추가:
 
