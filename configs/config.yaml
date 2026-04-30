@@ -1,0 +1,55 @@
+# ====================================================================
+# 프로젝트 전역 설정
+# ====================================================================
+
+project:
+  name: macro-bond-forecast
+  target: kr_treasury_10y           # 예측 대상 변수명
+
+# --- 데이터 수집 기간 -----------------------------------------------
+data:
+  start_date: "2010-01-01"
+  end_date:   "2025-12-31"
+
+# --- 학습/검증/테스트 분할 (계획서 §4.2) ---------------------------
+split:
+  train: ["2010-01-01", "2021-12-31"]
+  val:   ["2022-01-01", "2022-12-31"]
+  test:  ["2023-01-01", "2025-12-31"]
+
+# --- 피처 엔지니어링 -------------------------------------------------
+features:
+  lags: [1, 5, 10, 20, 30]          # lag feature 생성 시점
+  lookback_window: 30                # LSTM 입력 시퀀스 길이 (영업일 기준)
+  scaler: "robust"                   # robust / standard / minmax
+
+# --- 모델 하이퍼파라미터 (초안) -------------------------------------
+models:
+  lstm:
+    hidden_units: 64
+    num_layers: 2
+    dropout: 0.3
+    learning_rate: 0.001
+    batch_size: 32
+    epochs: 100
+    early_stopping_patience: 10
+
+  xgboost:
+    n_estimators: 500
+    max_depth: 6
+    learning_rate: 0.05
+    early_stopping_rounds: 50
+
+# --- 평가 ------------------------------------------------------------
+eval:
+  metrics: ["rmse", "mae", "directional_accuracy"]
+  baseline: "naive"                  # 상대 개선 비교 기준
+
+# --- 경로 (PROJECT_ROOT 기준 상대) ----------------------------------
+paths:
+  data_raw:       "data/raw"
+  data_interim:   "data/interim"
+  data_processed: "data/processed"
+  models:         "models"
+  reports:        "reports"
+  figures:        "reports/figures"
