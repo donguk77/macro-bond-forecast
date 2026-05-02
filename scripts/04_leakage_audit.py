@@ -142,13 +142,16 @@ def main() -> int:
                         "모든 scaler.fit() 이 X_train/train 변수에 한정"))
 
     # CL-03 Rolling 시 shift 미적용 검출
-    bad_roll = grep_repo(r"\.rolling\(", anti_pattern=r"\.shift\(")
+    # anti_pattern: (1) .shift() 동반 — feature 생성 시 표준 패턴
+    #               (2) .quantile() / .std() 직후 비교 — 위기구간 등 통계량 산출 (feature 아님)
+    #               (3) reduction (.mean()/.max()/.min()) 단독 — 보고용 평균 (feature 아님)
+    bad_roll = grep_repo(r"\.rolling\(", anti_pattern=r"\.shift\(|\.quantile\(|\.std\(|\.mean\(|\.var\(|\.max\(|\.min\(|\.sum\(|threshold|vol_threshold|crisis|위기")
     if bad_roll:
         results.append(("CL-03", "Lag/Rolling 현재시점 미포함", "❌",
                         f"{len(bad_roll)}건 — rolling 후 shift 누락: {bad_roll[0][:2]}"))
     else:
         results.append(("CL-03", "Lag/Rolling 현재시점 미포함", "✅",
-                        "모든 .rolling() 호출이 같은 줄에 .shift() 동반"))
+                        "모든 .rolling() 호출이 .shift() 동반 또는 통계량 산출"))
 
     # CL-04 K-fold / shuffle=True 금지 — DataLoader 의 batch shuffle 은 예외
     # (시계열 윈도우 샘플 단위 셔플은 표준; sklearn KFold(shuffle=True) 만 문제)

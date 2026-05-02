@@ -1,0 +1,4 @@
+comparison,T,NW_lag,rmse_a0,rmse_other,DM_raw,DM_HLN,p_value,bonf,direction
+A0_vs_Naive,672,6,4.1699,4.5348,-6.81,-6.805,0.0,OK,A0 wins
+A0_vs_XGBoost,672,6,4.1699,4.5287,-6.968,-6.963,0.0,OK,A0 wins
+A0_vs_LSTM_raw,672,6,4.1699,4.5355,-6.719,-6.714,0.0,OK,A0 wins

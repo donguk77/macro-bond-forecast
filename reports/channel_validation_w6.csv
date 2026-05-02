@@ -1,0 +1,9 @@
+feature,hypothesis,actual_sign,shap_signed_mean,shap_abs_mean,signed_abs_ratio,region,match,channel
+kr_treasury_3y,?,-,-0.00331,0.01302,0.254,weak,NA,KR short-term yield curve
+kr_base_rate,+,+,7e-05,8e-05,0.859,strong,OK,monetary policy transmission
+us_treasury_10y,+,-,-0.00656,0.05467,0.12,noise,noise,US-KR co-movement
+us_fed_funds,+,+,8e-05,0.00023,0.342,weak,OK,US monetary policy
+us_breakeven_10y,+,+,0.00095,0.00612,0.155,noise,noise,inflation expectation
+vix,-,+,0.0017,0.01166,0.146,noise,noise,safe-haven demand
+sp500,-,-,-0.0001,0.01031,0.01,noise,noise,risk-on/risk-off flow
+dxy,+,-,-0.00035,0.00527,0.067,noise,noise,EM capital outflow
