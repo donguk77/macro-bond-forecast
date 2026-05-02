@@ -2,7 +2,7 @@
 
 > 안내문 §7: **AI 가 제안한 내용 중 잘 맞았던 부분과 틀렸던 부분을 구분**해서 적는다. 반드시 *무엇을* 수정했는지와 *왜* 수정했는지를 쓴다. **최소 3건 이상**의 검증 사례를 남긴다.
 >
-> ✅ 현재 37건 기록 — 안내문 최소 요건(3건) 충족.
+> ✅ 현재 40건 기록 — 안내문 최소 요건(3건) 충족.
 
 ---
 
@@ -303,6 +303,41 @@
   - **V7** `docs/ablation_plan_w3.md` — 옛 A1/A2/A3 명명을 A1' (Δkrw_usd[t-1]) / A2' (Δkospi[t-1]) / A3' (Δkr_ppi[t-1]) 로 일관 갱신, 결과 보고 표도 새 명명 + Dir_Acc 컬럼 + DM(HLN+Bonferroni) 명시 + 음수 채택 원칙 §3.2.c 인용
   - 최종 audit 상태: ✅ 7건 (CL-01~05, CL-06, CL-07) / ❌ 2건 (CL-05b 정책변수 + CL-05c 미국 마감변수) — W4 raw LSTM 의 timing leak 잔존 결함이 audit 에서 *7개 변수 모두* 명시화됨
 - 수정 이유: 본 LOG 항목은 **메타-검증의 메타-검증** — 사용자 직감이 AI 의 검증 작업(#36) 자체에 미완이 있음을 발견한 사례. "검증 도구를 한 번 만들면 끝" 이 아니라 #30 → #36 → #37 의 3회 누적 강화가 필요했음을 보여줌. 안내문 §7 "AI 가 제안한 결과를 스스로 검증" 의 직격: AI 가 검증을 했지만 (a) #35 에서는 결과 부진 진단을 누락, (b) #36 에서는 audit 강화 시 변수 그룹 누락, (c) 두 번 모두 사용자 한 줄 질문으로 발견. 본 패턴 자체가 §11.8 차별화 포인트 (AI 사용 기록 14건+ 누적) 의 가장 강한 실증. 발표 서사: "audit 도구도 3회 강화 — CL-01~07 (W2) → CL-05b (W4 검증) → CL-05c (W4 메타-검증) → 잔존 결함 2건 (CL-05b/CL-05c) 명시화 → 메인 모델 A0 는 자동 해결".
+
+### #38 | 2026-05-02 | 동욱 (✅ W5 §1·§2·§3 — A0 multi-seed robustness + grid 5×5 + final baseline)
+- 맥락: 5주차 진입 첫 작업으로 W4 검증 deferred (#36 C3) 인 A0 multi-seed robustness 검증 + 계획서 §5.5 수동 grid 5×5 (lr × hidden) 탐색 + best HP 로 final baseline 재학습. 노트북 `notebooks/05_tuning_ablation.ipynb` §1~§3 자동 실행. 산출물: `lstm_a0_multiseed_w5.csv`, `grid_5x5_w5.csv` + `w5_01_grid_heatmap.png`, `lstm_a0_final_eval_w5.csv` + `models/lstm_a0_final_w5.pt`.
+- 잘 맞은 부분: AI 가 작성한 W5 노트북의 (a) 공통 유틸 (`build_diff_features` `make_sequences` `train_one` `evaluate`) 추상화로 25 grid 조합 + 9 seed 변형 모두 동일 인터페이스 학습, (b) `torch.Generator().manual_seed(seed)` + `np.random.seed(seed)` 결정성 강화 (#36 V6 후속), (c) early stopping (patience=10) + 25 조합 직렬 실행 시간 효율 (총 grid 시간 약 13분), (d) heatmap 시각화에 best 위치 별표 자동 표시 모두 정확 작동. 결과: **A0 multi-seed (default config) 의 RMSE std 0.085 / CV 2.0% < 5% 기준 → robust 판정 ✅**. Grid 5×5 best (val pinball): **lr=5e-4, hidden=128 (val=1.483)**, 2위 lr=1e-3/hidden=96 (val=1.488), 3위 lr=5e-3/hidden=48 (val=1.491) — 상위 3개 모두 val<1.50 으로 hyperparameter 표면 평탄. Final A0 (best HP × 3 seed) test mean: **RMSE 4.195±0.030, Coverage 0.902±0.014, Dir_Acc 0.638±0.011** — Naive 4.647 대비 **-9.7%** (W4 default config 4.235 대비 -1.0% 추가 개선).
+- 틀렸거나 부적절했던 부분: AI 의 1차 grid 결과 분석은 "best HP (lr=5e-4, hidden=128) 선택" 만 강조했으나, 실제 데이터는 (a) 상위 3개 조합의 val pinball 차이 0.008 으로 매우 미세, (b) 그 사이에서 hidden=128/lr=5e-4 (대규모) vs hidden=48/lr=5e-3 (소규모 + 빠른 학습) 같이 **정성적으로 다른 영역의 모델** 이 거의 동등. → "best HP 단일 선택" 보다 "상위 3개 모두 robust" 가 더 정직한 해석. 또한 W4 부진의 진짜 원인이 hyperparameter 가 아닌 입력 변수 비정상성(#35) 이었음을 grid 결과가 재확인 — best HP 추가 개선 -1.0% 가 A0 변환 추가 개선 -8.4% (W4→A0) 대비 작음. 즉 grid 5×5 의 한계 효용이 작음.
+- 수정 내용: §3 final A0 baseline 의 보고 형식을 "best HP 단일 + multi-seed mean±std" 로 통일 (val/test 모두 std 동반). `models/lstm_a0_final_w5.pt` 에 best_seed (val pinball 최저) 의 가중치 + config (BEST_LR, BEST_HIDDEN, BEST_SEED) 저장. 6주차 SHAP 재산출은 본 모델로 진행 권장. 발표 자료에 "grid 5×5 의 best HP 보다 입력 변수 변환 (raw → Δfeat[t-1]) 의 효과가 8배 큼" 명시.
+- 수정 이유: AI 가 "tuning 결과 발표" 시 흔히 best 단일 선택만 강조하는 함정을 사전 차단. 상위 3개 robust 사실 + 변환 vs tuning 효용 비교는 안내문 §9 "오류 분석 20%" 평가에서 "왜 grid 5×5 가 큰 개선 안 됐는가" 질문에 정직한 답변. C3 multi-seed robustness ✅ 확정으로 5주차 baseline 신뢰도 확보.
+
+### #39 | 2026-05-02 | 동욱 (✅ W5 §4·§7 — A1' 환율 ablation 결과 (음수 채택 원칙) + CQR 후처리 불필요 결정)
+- 맥락: 계획서 §3.2(b) 의 환율 ablation 1개 필수 + (선택) Conformal 후처리. A0 final baseline (lr=5e-4, hidden=128, multi-seed) 위에 `Δkrw_usd[t-1]` 추가하여 9 Δfeatures 로 재학습 (3 seed). 동시에 §5.6 CQR 후처리 적용 후 비교. 산출물: `ablation_a1_w5.csv`, `cqr_post_w5.csv`. 추가로 §5/§6 (A2'/A3') 는 corr 사전 점검 (`corr(Δkospi[t-1], Δy_t)` `corr(Δkr_ppi_announced[t-1], Δy_t)`) 모두 |r|<0.05 → 음수 채택 원칙으로 실행 회피.
+- 잘 맞은 부분: AI 가 §4 ablation 코드에 (a) 동일 best HP/SEEDS/lookback 으로 변수 변경만 격리, (b) `fit_scaler_and_transform` 으로 scaler 자동 재fit (CL-02 준수, 9 vars 분포 변화 반영), (c) A0 vs A1' Δ 계산 + 부호별 색상 표시 (Dir_Acc 증가 🟢, RMSE 감소 🟢) 모두 정확. 결과: **A1' test (mean) RMSE 4.204 vs A0 4.195 (+0.009), Coverage 0.894 vs 0.902 (-0.008), Dir_Acc 0.630 vs 0.638 (-0.008) → 환율 추가 효과 거의 없음 (모두 std 범위 안)**. CQR: pre Coverage 0.900 (이미 목표) → post 0.930 (+3%p), sharpness 12.34 → 13.92 (+12.8%) → A0 가 이미 목표 Coverage 정확 달성하므로 **CQR 보정 불필요 (sharpness 만 악화)** 결정.
+- 틀렸거나 부적절했던 부분: AI 의 1차 해석은 "A1' Δ 가 작으니 환율은 의미 없음" 으로 단정. 실제로는 두 가지 정직한 해석 가능: (1) **8 base Δfeatures 가 이미 환율 정보의 lag-1 효과를 통해 충분 capture** (Δus_treasury_10y, Δus_breakeven_10y 등이 글로벌 자본흐름 채널을 이미 표현), (2) **환율 자체의 forecasting 신호가 약함** (corr(Δkrw_usd[t-1], Δy_t) 사후 검증 필요). AI 가 (1) 만 강조하면 (2) 의 가능성 누락 — 두 해석이 양립 가능. 또한 CQR 결과 해석에서 "불필요" 단정은 **distribution shift 시점에서는 도움 가능** 임을 누락 (계획서 §5.6 의 distribution shift 면책과 정합).
+- 수정 내용: A1' 결과를 "환율 추가의 *한계 효용 0* (음수 채택 원칙 §3.2.c)" 로 보고. 발표 서사: "**환율 제외 결정의 정량 근거 강화** — (i) 정성적: 정부 개입으로 시장 메커니즘 비순수 (계획서 §3.4), (ii) 정량적: A1' ablation Δ ≈ 0 (모두 std 범위 안) → 8 base 변수의 Δfeature 변환이 환율 정보의 거시 채널을 이미 capture". A2'/A3' 건너뜀 사실 (corr 사전 점검 미충족) 도 발표 자료에 명시 — *"음수 채택 원칙으로 실행 비용 절감, 결과 보고 가치 동일"*. CQR 은 "현 baseline 에서는 불필요, 6주차 위기구간 분석 후 재검토" 로 deferred.
+- 수정 이유: AI 가 ablation 음수 결과를 "효과 없음" 으로 단순화하면 발표에서 "왜 환율을 안 넣었는가" 질문에 약한 답변. 본 LOG 가 그 답변의 정량 근거 (A1' 의 RMSE/Coverage/Dir 모두 std 범위 안의 미세 차이). 계획서 §3.2(c) 음수 채택 원칙 (부정적 결과도 §6.4 오류 분석 자료) 의 5주차 실증 사례. 또한 A2'/A3' 의 사전 corr 점검으로 실행을 회피한 것은 학부 7주 일정의 시간 효율 측면에서 합리적 (실행해도 결과는 비슷하게 작은 Δ 였을 가능성 높음, V6 의 \|r\|<0.05 신호와 정합).
+
+### #40 | 2026-05-02 | 동욱 (✅ W5 메타-검증 — V2 val-overfit 가능성 + V9 A1' HP 일관성 미검증)
+- 맥락: 사용자 직감 *"5주차도 검증을 먼저 해야 할 것 같아"* → W4 메타-검증 패턴 (#30 → #36 → #37) 의 5주차 적용. `scripts/06_w5_meta_verify.py` 작성, V1~V9 9개 항목 자동 점검. 7건 통과, **2건 잔존 결함 발견** (V2 critical + V9 medium).
+- 잘 맞은 부분:
+  - **V1**: A0 multi-seed 모든 7개 metric CV 점검 → default config 1.4%~4.1%, best HP 0.8%~5.5% (sharpness 만 5.5% 경계) → robustness 정량 확정
+  - **V3**: A0 vs A1' paired difference — 모든 metric 의 \|Δ\| < A0 std (rmse 0.0085 vs std 0.0287, coverage -0.0084 vs std 0.0110, dir -0.0070 vs std 0.0103) → "같은 범위" → 환율 추가 random noise 수준 정량 확인
+  - **V4**: A2'/A3' lag 1~20 전 구간 corr 점검 — kospi max \|r\|=0.013, kr_ppi(announced) max \|r\|=0.042 → 모두 \<0.05, **단일 lag 사전 점검의 정당성 다중 lag 로 추가 확인**
+  - **V5**: krw_usd 219 결측이 raw 단계만, fv 인덱스 reindex 후 0건 (이미 ffill). A0/A1' 시퀀스 size 모두 3755 동일 → 비교 공정성
+  - **V6**: CQR 산술 정합 — 예상 sharpness 증가 2Q=1.576 bp = 실제 +1.576 bp (오차 0.000)
+  - **V7**: 노트북 17/17 cell 정상 실행, error 0
+  - **V8**: audit 재실행 — CL-05b/c ❌ 동일 (W5 산출물 추가 후 회귀 없음)
+- 틀렸거나 부적절했던 부분 (V2 + V9):
+  - **V2 (CRITICAL)**: AI 가 #38 에서 *"best HP (lr=5e-4, hidden=128)"* 단일 선정으로 보고했으나, val 1위가 test 에서 **5위** 로 떨어짐. val 1위 (lr=5e-4/h=128) test RMSE **4.235** vs val 3위 (lr=5e-3/h=48) test RMSE **4.124** (test 1위). **val pinball 분산이 자연 noise 수준** (top-5 차이 0.016) + **val (2022) 가 covariate shift 구간** (LOG #32) → val 단독 best HP 선택이 부적절. 만약 lr=5e-3/h=48 을 best 로 했다면 추가 -1.7% 개선 가능했음. AI 의 1차 분석은 "best HP 단일 선택" 만 강조 — top-3 모두 robust 해석 누락.
+  - **V9 (MEDIUM)**: A1' 가 9 vars 인데 8 vars 전용 best HP (lr=5e-4, h=128) 그대로 학습. 9 vars 전용 grid 안 돌림 → A1' 의 "환율 추가 효과 없음" 결론이 두 가지 해석 양립 가능: (1) 신호 부재 (현재 #39 의 입장), (2) HP 부적합 (9 vars 에서 best HP 가 다를 수 있음). 학부 7주 일정상 9 vars 전용 grid 5×5 추가 실행은 비현실적이지만 발표 시 양립 해석 명시 필요.
+- 수정 내용:
+  - **Option B 채택** (사용자 결정) — 현 best HP (lr=5e-4, h=128) 유지, final A0 모델 재학습 안 함
+  - 발표 frame 을 *"best HP 단일 선택"* → *"top-3 robust 해석"* 으로 전환
+  - 발표 자료에 명시: (a) val 기준 1위 선택 (학술 표준), (b) val pinball 차이 0.016 으로 grid 평탄, (c) test 결과로 HP 사후 변경 안 함 (data snooping 회피), (d) lr=5e-3/h=48 이 test 1위였다는 사실도 정직하게 보고
+  - V9 는 발표 시 양립 해석 명시 — *"8 vars 의 best HP 를 9 vars 에 그대로 적용. 만약 환율 신호가 약한 게 아니라 HP 가 부적합한 거라면 9 vars 전용 grid 가 필요하지만, 학부 7주 일정상 deferred"*
+  - `scripts/06_w5_meta_verify.py` 자체는 산출물로 보존 → V1~V9 검증 결과 재현 가능
+- 수정 이유: **test set 으로 HP 사후 선택은 train/val/test 분할의 학술 표준 침식** — test 가 사실상 두 번째 val 역할로 변하면 일반화 성능 평가의 의미 손실 (data snooping). 정직한 frame "val 기준 선택 + top-3 robust + test 결과 사후 변경 안 함" 가 채점관 Q&A *"왜 val 1위 안 골랐냐"* 보다 *"왜 test 1위 골랐냐 (data snooping)"* 질문이 훨씬 곤란. 또한 본 메타-검증 사례 (#30 → #36 → #37 → #40) 가 안내문 §7 "AI 결과 자가 검증" 의 4회 누적 강화 패턴 — 매 단계마다 사용자 직감 한 줄로 발견되는 일관성. §11.8 차별화 포인트 (AI 사용 기록 14건+ 누적) 가 이제 **40건 (안내문 요건의 13.3배)**.
 
 <!--
 이후 항목은 아래 템플릿 복사해서 추가:

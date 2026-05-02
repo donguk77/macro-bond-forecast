@@ -1,0 +1,13 @@
+model,split,RMSE_bp,MAE_bp,Dir_Acc
+Naive (Δŷ=0),val,7.101,5.483,
+Naive (Δŷ=0),test,4.647,3.477,
+"ARIMA(1, 0, 1)",val,7.114,5.5,0.431
+"ARIMA(1, 0, 1)",test,4.651,3.483,0.497
+XGBoost(q50),val,7.075,5.455,0.509
+XGBoost(q50),test,4.644,3.469,0.512
+LSTM(q50),val,7.39,5.761,0.456
+LSTM(q50),test,4.535,3.391,0.495
+A0_Δfeat[t-1],val,7.149,5.514,0.593
+A0_Δfeat[t-1],test,4.195,3.117,0.638
+A1'_+Δkrw_usd,val,7.131,5.489,0.637
+A1'_+Δkrw_usd,test,4.204,3.123,0.63
