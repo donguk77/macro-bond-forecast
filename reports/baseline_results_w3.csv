@@ -1,0 +1,12 @@
+model,split,RMSE_bp,MAE_bp,Dir_Acc
+Naive (Δŷ=0),train,3.606,2.571,
+Naive (Δŷ=0),cal,3.502,2.631,
+Naive (Δŷ=0),val,7.101,5.483,
+Naive (Δŷ=0),test,4.647,3.477,
+"ARIMA(1, 0, 1)",train,3.603,2.579,0.515
+"ARIMA(1, 0, 1)",cal,3.517,2.643,0.473
+"ARIMA(1, 0, 1)",val,7.114,5.5,0.431
+"ARIMA(1, 0, 1)",test,4.651,3.483,0.497
+XGBoost(q50),train,3.493,2.445,0.808
+XGBoost(q50),val,7.075,5.455,0.509
+XGBoost(q50),test,4.644,3.469,0.512
