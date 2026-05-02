@@ -1,0 +1,26 @@
+{
+  "method": "DeepExplainer",
+  "error": null,
+  "features": [
+    "kr_treasury_3y",
+    "kr_base_rate",
+    "us_treasury_10y",
+    "us_fed_funds",
+    "us_breakeven_10y",
+    "vix",
+    "sp500",
+    "dxy"
+  ],
+  "background_n": 200,
+  "eval_n": 100,
+  "importance_top": {
+    "us_fed_funds": 0.000434,
+    "sp500": 0.000281,
+    "kr_base_rate": 0.000259,
+    "us_treasury_10y": 9.1e-05,
+    "kr_treasury_3y": 6.2e-05,
+    "vix": 6e-05,
+    "dxy": 5.9e-05,
+    "us_breakeven_10y": 5.5e-05
+  }
+}
