@@ -18,11 +18,12 @@ macro-bond-forecast/
 │   ├── interim/                 # 중간 변환 (wide 통합)
 │   └── processed/               # 모델 학습용 최종 (8개 변수 확정 후)
 ├── notebooks/                   # 번호 prefix 로 실행 순서 명시
-│   ├── 01_eda.ipynb
-│   ├── 02_feature_selection.ipynb   # 22개 → 8개 축소 정당화
-│   ├── 03_baselines.ipynb           # Naive / ARIMA / XGBoost
-│   ├── 04_lstm.ipynb
-│   └── 05_shap_analysis.ipynb
+│   ├── 01_eda.ipynb                    # 1주차 — 광역 22개 EDA + freeze 9 결정
+│   ├── 02_feature_selection.ipynb      # 2주차 (a) — 상관·VIF·Granger 산출물 3건
+│   ├── 02b_preprocess_baseline.ipynb   # 2주차 (b) — 전처리·Lag/Rolling·Naive·ARIMA·누수 리뷰·리포트 골격
+│   ├── 03_freeze_xgboost.ipynb         # 3주차 — 변수 freeze 확정 + XGBoost 분위수 회귀
+│   ├── 04_lstm.ipynb                   # 4-5주차 — LSTM 분위수 회귀 + LSTM-SHAP
+│   └── 05_shap_analysis.ipynb          # 6주차 — 분위수별 SHAP + 오류 분석 4축
 ├── src/                         # 재사용 모듈 (notebook 에서 import)
 │   ├── data/                    # 수집 함수
 │   ├── features/                # lag / scaling / window

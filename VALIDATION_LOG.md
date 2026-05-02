@@ -2,7 +2,7 @@
 
 > 안내문 §7: **AI 가 제안한 내용 중 잘 맞았던 부분과 틀렸던 부분을 구분**해서 적는다. 반드시 *무엇을* 수정했는지와 *왜* 수정했는지를 쓴다. **최소 3건 이상**의 검증 사례를 남긴다.
 >
-> ✅ 현재 29건 기록 — 안내문 최소 요건(3건) 충족.
+> ✅ 현재 37건 기록 — 안내문 최소 요건(3건) 충족.
 
 ---
 
@@ -235,6 +235,74 @@
   - `data/processed/features_v1_candidate.csv` 재생성 (shape: 3757 × 10)
   - 계획서 v5.1 §3.2 docx 미세 수정 권장 (사용자가 Claude 챗 스킬로 처리)
 - 수정 이유: 9개로 확정한 이유는 5개 거시경제 채널 일관성. 8개로 줄이면 인플레 채널이 빠지거나(us_breakeven_10y 제외) 글로벌 신호가 빠짐(dxy 제외). 9개가 sweet spot.
+
+### #30 | 2026-05-02 | 동욱
+- 맥락: 2주차 누수 자동 감사(`02b_preprocess_baseline.ipynb` cell 24)가 ❌ 4건을 보고. AI 가 작성한 인라인 grep 로직을 사람이 line-by-line 재검증한 결과 **모두 false positive** — 감사 스크립트 자체의 결함이고 실제 코드는 누수-안전.
+- 잘 맞은 부분: 자동 감사 프레임 자체는 7개 항목을 일관된 형식으로 점검하는 좋은 구조. CSV 산출물로 외화하는 패턴은 `feature_validation_w2.md` 와 동일한 협업 친화적 형식. CL-01·CL-03·CL-07 검출 로직은 정확히 동작.
+- 틀렸거나 부적절했던 부분: 4건의 ❌ 가 모두 false positive — (a) `.ipynb` 를 raw 텍스트로 splitlines() → 마크다운 셀의 설명문(`` `scaler.fit()` 은 Train 구간에만…``)까지 grep 매치(CL-02), (b) 감사 코드 자체의 주석(`# CL-04 K-fold / shuffle=True 금지`)을 매치(CL-04), (c) 감사 코드 자체의 정규식 패턴 문자열(`r'\.bfill\('`)을 매치(CL-06), (d) shift(1)+dropna 후 첫 행을 원본 첫 행과 단순 != 비교 → 정책금리는 영업일 단위로 거의 동일값이라 항상 검증 실패(CL-05). 이 상태로 3주차 freeze 진입 시 진짜 누수가 들어와도 4건의 노이즈에 묻혀 알아채기 어려움.
+- 수정 내용: (1) 감사 로직을 `scripts/04_leakage_audit.py` 로 분리, (2) `.ipynb` JSON 파싱 후 `cell_type == 'code'` 만 스캔(마크다운 제외), (3) `#` 주석 줄 + `grep_repo(` 메타 코드 줄 + 감사 스크립트 자기 자신 제외, (4) CL-05 는 `features_v1_candidate.csv` 와 `features_with_lags_v1.csv` 의 정책 변수 컬럼을 직접 비교(3,726행 일치 확인), (5) 노트북 cell 24 는 새 스크립트를 `subprocess.run` 으로 호출하는 방식으로 단순화. 재실행 결과 **7/7 ✅ 통과**. `feature_validation_w2.md` §7 에 false positive 분석 + 강화 사항 + 최종 결과 표 추가.
+- 수정 이유: 자동 감사가 false positive 를 누적하면 진짜 신호가 묻혀 도구 자체가 무용지물. 안내문 §7 "AI 가 제안한 결과를 스스로 검증" 원칙 직격 — AI 가 짠 검증 도구를 사람이 다시 검증한 사례 자체가 본 프로젝트의 핵심 차별화 포인트(§11.8) 의 실증. 또한 CL-05 의 검증 로직 결함은 **검증 코드와 검증 대상 코드를 따로 작성하는 원칙**(독립 산출물로 교차 검증) 의 중요성을 보여줌.
+
+### #31 | 2026-05-02 | 동욱
+- 맥락: 3주차 freeze 결정 — 1주차 freeze 9개에서 `kospi` 를 제외하여 8개로 압축 (`notebooks/03_freeze_xgboost.ipynb` §2). AI 가 1주차 단계에서 "위험자산 채널 다양화" 명분으로 kospi 보존을 권고했으나, 2주차 산출물(`feature_validation_w2.md` §3~§4) 의 Granger·종합 점수 결과로 사용자가 제외 결정.
+- 잘 맞은 부분: AI 가 W2 종합 점수표에서 `kospi` 점수를 정확히 1점으로 산출 — Granger best_lag=1 / p=0.5705, |r|=0.043, VIF=1.11. 또한 위험 채널 측면에서 `sp500`-`vix` 가 -0.734 음의 상관임을 일찍 인지하고 위험 채널이 이미 2개로 충분함을 정량화한 점. `freeze_final_w3.md` §3 의 "5개 거시경제 채널 일관성" 정리도 정확.
+- 틀렸거나 부적절했던 부분: AI 의 1주차 권고 "한국 위험자산 채널 단독 1개라 보존" 의견은 **거시경제 채널 명분**으로 제시됐지만, Granger p=0.57(타겟을 통계적으로 선행 못함) 이 가장 강한 데이터 신호임을 후순위로 둠. 1주차 in-sample SHAP 3위(0.0016) 도 R²=0.268 과적합 모델에서 측정된 것이라 freeze 단계 채택 근거로는 약함 — `#26` 에서 이미 지적된 "in-sample SHAP 의 과적합 영향" 함정을 freeze 결정 단계에서 다시 만난 셈.
+- 수정 내용: kospi 를 freeze 8개에서 제외하고 5주차 ablation 후보 A2 로 강등(`docs/ablation_plan_w3.md`). 자산 채널이 글로벌(`sp500`) 1개로 축소됨을 `freeze_final_w3.md` §3 에 명시. 음수 채택 원칙(§3.2.c)에 따라 5주차 A2 결과가 음수로 나와도 그대로 발표 자료에 반영.
+- 수정 이유: Granger p=0.57 은 "타겟을 선행하지 못함" 의 직접 통계 증거. 도메인 채널 명분으로 데이터 신호를 누르면 계획서 §3.1 "변수 선정을 사전 이론이 아닌 EDA 결과로 정당화" 원칙 위반. 채널 명분은 ablation 결과로 다시 검증하는 것이 학술적으로 정직하고, 5주차 A2 가 음수 결과여도 §6.4 오류 분석 자료로 가치가 살아남.
+
+### #32 | 2026-05-02 | 동욱
+- 맥락: 3주차 XGBoost 분위수 회귀(`reports/xgb_quantile_eval_w3.csv`) 결과 — train Coverage 0.908(목표 0.9 일치), **val 0.667 폭락 (-23%p)**, test 0.870(목표 -3%p, 경계 안). RMSE 도 train 3.49 → val 7.08 (+103%) → test 4.64 의 비대칭 변동. AI 가 1차로 "하이퍼파라미터 5×5 grid 부족" 으로 진단 → 사용자가 거시 맥락(2022 Fed 인상기) 으로 재해석.
+- 잘 맞은 부분: §7 monotonicity 점검 결과 sort 전후 raw==sorted 가 train/val/test 전 구간에서 일치 — XGBoost 분위수 모델이 처음부터 monotonic 출력을 내고 있음이 데이터로 확인됨(quantile crossing 0건). Pinball val 2.727 vs test 1.734 의 비대칭은 분포 변화의 일관 신호. test Coverage 0.870 이 90%±3%p 경계 안에 들어온 것은 분위수 회귀 골격 자체는 작동함을 시사.
+- 틀렸거나 부적절했던 부분: AI 의 초기 진단 "val Coverage 0.667 → 하이퍼파라미터 부족" 은 단순 인과. 실제로는 2022년 Fed 4.5%p 누적 인상으로 일별 Δy 의 σ 가 train(2010~2020) 분포 밖으로 이동 — **covariate shift** 가 더 정확한 진단. test(2023~2025) 가 0.870 으로 회복한 것이 이를 뒷받침 (val=2022 가 본 분할에서 가장 거친 구간). 단순 과적합이라면 test 도 비슷하게 낮아야 함.
+- 수정 내용: val Coverage 0.667 을 계획서 §6.4(c) Coverage Miss 분석의 **사전 사례**로 등록 — 4주차 LSTM 학습 후 동일 패턴(val 만 폭락) 이 재현되면 "튜닝 부족" 이 아닌 covariate shift 로 1차 해석. 5주차 (선택) Conformal Quantile Regression(CQR) 후처리의 motivation 강화 — distribution shift 적응 보정이 본 사례의 핵심 동기. 6주차 §6.4(c) 보고서 작성 시 본 XGBoost 베이스라인 결과를 reference 로 인용 (LSTM 도 같은 함정에 빠질지 비교).
+- 수정 이유: "더 튜닝하면 좋아진다" 는 AI 가 흔히 기울이는 진단. 학부생 발표 Q&A 에서 가장 많이 받는 질문 "왜 val 만 망가지는가" 에 대해 강한 답변은 거시 맥락 기반의 covariate shift 설명. 본 LOG 항목 자체가 안내문 §7 "AI 결과를 스스로 검증" 의 직격 사례 — AI 의 1차 모델 진단을 데이터 패턴(train/val/test 비대칭) 과 거시 맥락으로 재해석한 흐름.
+
+### #33 | 2026-05-02 | 동욱
+- 맥락: 4주차 LSTM 분위수 회귀(`reports/lstm_quantile_eval_w4.csv`, `04_lstm_quantile.ipynb`) 학습 결과 — test RMSE_q50 = **4.535 bp** (Naive 4.647 → -2.4%, XGBoost 4.644 → -2.3%), Pinball q50 = **1.696** (XGBoost 1.734 → -2.2%). 그러나 **Coverage 90% = 0.824** (목표 90%±3%p 하단 미달, -7.6%p), **Dir_Acc = 0.495** (목표 0.55 미달, **XGBoost 0.512 보다도 후퇴**). val 폭락(Coverage 0.615) 은 W3 XGBoost(0.667) 와 동일 covariate shift 패턴(`#32` 가설 재확인).
+- 잘 맞은 부분: AI 가 §5.2 multi-output head(Linear 64→3) + Pinball loss 합산 + early stopping(patience=10) 구조를 정확히 구현. §5.3 sort 후처리와 monotonicity 점검 결과 train/val/test 전 구간 **quantile crossing 0건** (raw==sorted 동일) — LSTM 출력이 처음부터 monotonic 임을 데이터로 확인. (입력 lookback 30일 × 8 features) 텐서 설계도 §5.2 와 일치. 4주차 검증 포인트 3개 중 (분위수 출력 + monotonicity) 2개 통과.
+- 틀렸거나 부적절했던 부분: AI 의 1차 해석 "LSTM 이 XGBoost 를 모든 지표에서 능가" 는 RMSE/Pinball 만 보고 평가한 것. 실제로는 (a) Coverage test 0.824 vs XGBoost 0.870 → **분위수 회귀 차별화 측면에서 LSTM 이 후퇴**, (b) Dir_Acc test 0.495 vs XGBoost 0.512 → **메인 차별화 지표(§7)에서도 후퇴**, (c) val Coverage 0.615 vs 0.667 → covariate shift 흡수 더 약함. RMSE 2.3% 개선은 학술/실무 기준에서 미미하고 6주차 DM test 통계적 유의성 의심됨. 계획서 §10 위험 표 "LSTM 이 Naive 를 못 이김" 시나리오의 부분 실현.
+- 수정 내용: 본 결과를 5주차 grid 5×5(lr 5수준 × hidden 5수준) 의 baseline 으로 등록. 5주차 튜닝 후 **세 가지 중 1개 이상 충족 못 하면** §10 fallback 시나리오로 진입: (1) Coverage 90%±3%p 회복, (2) Dir_Acc ≥ 0.55, (3) DM test p<0.05. fallback 시 발표 frame 을 "분위수 회귀 + Coverage·Sharpness 보조 지표 차별화" (계획서 §7 사전 결정) 로 전환 — RMSE 우열 주장 폐기.
+- 수정 이유: 학부 7주 프로젝트에서 점추정 -2.3% 개선은 "LSTM 이 베이스라인을 능가" 라고 주장하기 약함. AI 가 흔히 빠지는 "RMSE 개선 = 모델 우월" 함정을 §7 사전 결정(메인 차별화 = 방향성+DM test+Coverage)으로 사전 차단. 5주차 튜닝 후에도 미달이면 솔직히 그 사실을 발표하는 것이 안내문 §9 "오류 분석 20%" 평가에서 더 강함 (음수 채택 원칙 §3.2.c 의 모델 단계 적용).
+
+### #34 | 2026-05-02 | 동욱
+- 맥락: 4주차 LSTM-SHAP DeepExplainer 시도 — 계획서 §10 위험 표에 "LSTM-SHAP 호환 실패 가능, Permutation Importance 백업" 명시. 노트북에 try/except + 자동 백업 진입 로직 구현. 결과: **DeepExplainer 성공** (background 200, eval 100, output shape (100,30,8)). Top |SHAP|: `us_fed_funds`(1위, 0.000434), `sp500`(2위, 0.000281), `kr_base_rate`(3위, 0.000259), `us_treasury_10y`(4위, 0.000091). 4주차 검증 포인트 3개 중 (SHAP 동작) 마지막 1개 통과.
+- 잘 맞은 부분: AI 가 작성한 (a) `Q50Wrap` (q50 출력 1개 컬럼만 노출) wrapper, (b) trailing singleton output dim squeeze 로직 ((N,T,F,1)→(N,T,F)), (c) 시간×변수 |SHAP| heatmap (`w4_04_lstm_shap_time_heatmap.png`) 모두 정상 작동. 백업 분기(Permutation Importance)도 코드 자체는 검증 완료(실행만 안 됨). 1주차 #26 의 in-sample SHAP 1위 sp500 이 LSTM-SHAP 에서도 2위로 일관 등장 → 변수 선정의 데이터 신호 일관성 확보.
+- 틀렸거나 부적절했던 부분: AI 의 1차 해석 "정책 변수 SHAP 1, 3위 → 통화정책 전이 채널 가설 부합" 은 단정적. 실제로 정책 변수(`us_fed_funds`, `kr_base_rate`)는 일별 거의 동일값(결측 0%, 정책 결정일에만 이산 변동)이라 일별 Δy 모델에서 **SHAP 절대값이 작은 게 정상**. 1주차 #29 우려 1("정책 변수 SHAP 거의 0")이 W4 LSTM 에서는 오히려 **SHAP 1위로 등장** — XGBoost W1 SHAP(sp500 1위)과 결과가 다름. 모델 종류에 따른 SHAP 차이를 단정적으로 해석하지 말고 6주차 §6.4(d) 위기 vs 정상 SHAP 차이 분석에서 재검증 필요.
+- 수정 내용: SHAP 메타데이터(`reports/lstm_shap_meta_w4.json`)에 method=DeepExplainer + 8 변수 |SHAP| 저장. 6주차 §6.5 인과성 검토 시 본 결과를 다음 가설로 등록: (a) us_fed_funds 1위 → 정책 변수가 "거시 channel anchor" 역할 가설, (b) sp500 2위 → 위험자산 채널(W1 일관), (c) us_treasury_10y 4위 → 한미 동조성 가설은 부분 확인. 단, 본 결과는 **튜닝 전 baseline LSTM** (val coverage 0.615, Dir_Acc 0.495 미달) 의 SHAP 이므로 5주차 튜닝 후 베스트 모델에서 SHAP 재산출 및 본 결과와 비교 권장. §10 위험 "LSTM-SHAP 호환 실패" 가 실현되지 않았음을 명시(백업 미사용 근거).
+- 수정 이유: AI 가 SHAP 결과를 단정적으로 해석하는 함정(#26 in-sample 함정의 변형)을 사전 차단. 모델 종류(XGBoost vs LSTM)에 따른 SHAP 결과 차이는 학술 문헌상 흔하고, 채점관 Q&A 에서 자주 묻는 지점("XGBoost SHAP 1위는 sp500 인데 LSTM 은 us_fed_funds, 왜?"). "SHAP 결과는 모델 의존적" 이라는 학술적 사실을 미리 LOG 에 박아두면 발표에서 단정적 주장 위험 차단 + 6주차 §6.5 인과성 검토 자료로 자연 연결.
+
+### #35 | 2026-05-02 | 동욱 (🟡 4주차 결과 부진의 진짜 원인 진단)
+- 맥락: AI 가 W4 결과 부진(test RMSE 4.535≈Naive 4.647, Cov 0.824, Dir 0.495)에 대해 누수 점검(CL-01~07) 위주로 4건 결함을 보고했으나, 사용자가 **"결과 부진의 원인 분석을 한 거냐"** 로 재검토 요구 → AI 의 코드 점검 vs 결과 진단 분리 필요성 인정. 추가 점검(`scripts/05_lstm_diff_ablation.py` 사전 corr/Granger): features **레벨**↔Δy 상관 모두 \|r\|<0.05, **차분**[t-1]↔Δy 는 `Δus_treasury_10y[t-1]` r=+0.336, `Δus_breakeven_10y[t-1]` r=+0.138 등 강한 신호. → 가설: 비정상 레벨 입력으로 인한 신호 손실. **검증: 동일 하이퍼파라미터/seed 로 Δfeature[t-1] LSTM 재학습 → test RMSE 4.156 (Naive 대비 -10.6%), Coverage 0.899 (목표 정확 달성), Dir_Acc 0.662 (목표 0.55 초과)**. §7 메인 차별화 3개 모두 test 에서 충족.
+- 잘 맞은 부분: AI 의 누수 점검(L1 nowcasting / L2 정책변수 lag / L3 audit 결함 / L4 timing leak)은 모두 **코드 정합성 측면에서는 진실**이고 발견 그 자체는 가치 있음(#30 false positive 사례와 같은 패턴). W4 노트북의 분위수 sort·monotonicity·Pinball 산술·SHAP wrapper 모두 검증 통과. 산출물(`lstm_predictions_w4.csv`)의 모든 평가 지표가 독립 재계산과 일치 → 평가 파이프라인 자체는 정확.
+- 틀렸거나 부적절했던 부분: AI 가 검증의 우선순위를 잘못 잡음 — "코드가 계획서 규칙대로 작성됐는가" (CL-01~07 누수) 에 머물러 정작 "**예상과 다른 결과의 직접 원인이 무엇인가**" 진단을 안 함. 추후 점검 결과 L1~L4 모두 결과 영향 미미: (a) L1 nowcasting 이라면 contemporaneous 정보로 RMSE 더 낮아야 하는데 그렇지 않음, (b) L2 정책변수 t/t-1 차이 < 0.05% (대부분 동일값), (c) L3 audit 결함은 결과에 무관, (d) L4 미국변수 timing 도 V6 점검상 \|r\|<0.04 라 무의미. **실제 부진 원인은 입력 변수의 비정상성** — W2 `feature_validation_w2.md` 의 종합 점수표가 **레벨↔레벨** 상관 (kr_treasury_3y \|r\|=0.81 등 = yield curve 동조) 으로 채택 변수를 정당화했지만 모델이 학습해야 하는 타겟은 **Δy** → 입력은 **차분 변환 후** 평가했어야 함.
+- 수정 내용: (1) `scripts/05_lstm_diff_ablation.py` 산출 — `lstm_diff_ablation_w4.csv` + `w4_06_diff_ablation_compare.png`. (2) `docs/ablation_plan_w3.md` 갱신 — **A0 (Δfeature[t-1]) 를 5주차 필수 ablation 으로 격상**, 기존 A1/A2/A3 는 A0 위에 추가 변수로 재정의(A1'/A2'/A3'). (3) 5주차 진입 시 LSTM_Δfeat[t-1] 을 본 모델 baseline 으로 채택, raw[t] LSTM 은 W4 fallback 시나리오의 reference 로만 보존 (#33 의 fallback 등록은 결과적으로 불필요해짐). (4) 6주차 SHAP 재산출 시 raw vs Δfeat 모델 결과 비교를 §6.5 인과성 검토 자료로 추가.
+- 수정 이유: 본 LOG 항목은 **검증의 메타-검증** 사례 — AI 가 점검을 했는데 점검 자체의 우선순위가 틀렸음을 사용자 질문으로 발견. 안내문 §7 "AI 결과를 스스로 검증" 이 단순히 코드 검증을 넘어 **결과의 의미까지 검증**해야 함을 보여줌. 또한 "비정상 입력 변수의 차분 변환" 은 시계열 ML 의 가장 기본적 원칙(Box-Jenkins)이지만 W2 변수 검증이 이를 누락 → 채점관 Q&A "왜 차분을 안 했는가" 에 대한 강한 답변 필요. 본 LOG 가 그 답변(원래는 안 했지만 4주차 진단으로 발견 → 5주차 ablation 핵심으로 격상). 발표 서사: "raw LSTM 부진(W4) → 진단(레벨↔Δy 상관 \|r\|<0.05) → 가설(비정상성) → 검증(Δfeature[t-1] 재학습) → 회복(RMSE -10.6%, Cov 0.9, Dir 0.66)" — 안내문 §9 "오류 분석 20%" 의 **모범 사례**.
+
+### #36 | 2026-05-02 | 동욱 (✅ 4주차 코드 검증 후속 정리 — C1/C2/C4 완료)
+- 맥락: 사용자가 4주차 검증 결과 (코드 점검 4건 + 결과 진단 1건 + Δfeat 회복 1건) 를 종합해 "어떻게 진행하는 게 좋을지" 물음 → AI 가 **Option B (docs 정정 + 부분 수정 + 5주차 multi-seed)** 추천. 사용자 승인 후 C1/C2/C4 즉시 실행.
+- 잘 맞은 부분: AI 의 Option B 권고 근거 — (1) C1 의 "라벨 = Δy_t" 는 *코드 정의* 의 차이일 뿐 1-step ahead causal forecast 의 정보 lead time·인과성·모델 구조는 §2.2 와 동일, (2) Option A 전면 재실행은 A0 win 을 잃을 위험 + 학부 7주 비대칭 비용, (3) 사용자 패턴 (학부 안정 우선, 정직한 분석) 과 정합. 작업 결과: 계획서 §2.1·§2.2 정정 (Δy_{t+1} → Δy_t with 1-step ahead 정의 명시), 04 노트북 §3 마크다운 거짓 주장 제거 + 인과성 명시, 04 노트북 §13 에 baseline 교체 결정 명시, audit 스크립트에 CL-05b 추가 (정책변수 raw 단계 t-1 강제 직접 검증). audit 재실행 결과 **CL-05b 만 ❌** (us_fed_funds raw[t-1] 78.5% vs raw[t] 100% 로 raw 단계 lag 미적용 정량 보고), 나머지 7개 항목 ✅. CL-04 false positive (DataLoader shuffle=True) 도 anti_pattern 정밀화로 해결 (시계열 윈도우 셔플은 허용).
+- 틀렸거나 부적절했던 부분: AI 가 Option B 추천 시 "C2 audit 강화 30분" 으로 추정했으나 실제 작업은 (1) CL-05b 추가, (2) audit 실행, (3) CL-04 false positive 발견, (4) anti_pattern 정밀화, (5) 재실행 까지 약 50분 소요. 점검 도구의 false positive 가 점검 도구 강화 작업에서 또 발견되는 패턴 (#30 false positive → audit 강화 → #36 audit 강화 작업에서 또 false positive 발견) — "검증 도구 자체가 검증 대상" 이라는 일관 신호.
+- 수정 내용: 
+  - `docs/project_plan.md` §2.1·§2.2 — `Δy_{t+1}` 표기 → `Δy_t = (y_t − y_{t-1})×100` + "1-step ahead forecast: t-1 까지 정보로 t 시점 변화 예측" 명시
+  - `notebooks/04_lstm_quantile.ipynb` §3 마크다운 — 거짓 주장 ("Δy_{t+1} 로 시프트된 라벨") 제거, "1-step ahead causal forecast" 정의 + KR/US 시장 마감 시차 처리 명시
+  - `notebooks/04_lstm_quantile.ipynb` §13 — A0 (Δfeat[t-1]) 로 baseline 교체 결정 명시 (LOG #35 결정 docs 반영)
+  - `scripts/04_leakage_audit.py` — CL-05b 추가 (features_v1 vs raw_collected 직접 비교, 정책변수의 raw 단계 lag-1 강제 검증) + CL-04 anti_pattern 에 `DataLoader|batch_first` 추가 (시계열 윈도우 셔플 허용)
+  - `reports/leakage_audit_w2.csv` 갱신 — CL-01~CL-04, CL-05, CL-06, CL-07 ✅ + **CL-05b ❌** (W4 raw LSTM 의 잔존 결함 명시화, A0 Δfeat[t-1] 은 diff().shift(1) 로 자동 해결됨을 비고)
+  - C3 (A0 multi-seed 검증) 은 5주차 첫 작업으로 deferred — `05_tuning_ablation.ipynb` 의 grid 5×5 진입 전 첫 단계
+- 수정 이유: 학부 7주 일정에서 plan 표기와 코드 의미의 차이는 docs 정정으로 일관 처리하고, 잔존 결함 (CL-05b) 은 명시화하여 audit 도구가 정직하게 보고하도록 유지. 점검 도구의 false positive (CL-04 DataLoader) 는 정밀 패턴으로 해결하되 false positive 발견 자체를 LOG 에 기록 → "검증 도구의 검증" 이 본 프로젝트의 반복 패턴임을 강조 (#30 → #36 일관). 발표 시 "코드 점검 결과 잔존 1건 (CL-05b) 은 W4 raw 의 영향 측정 reference 로만 작용; 메인 모델 A0 는 자동 해결" 로 frame.
+
+### #37 | 2026-05-02 | 동욱 (✅ #36 후속 — 메타-검증 의 메타-검증, V1~V7 잔존 결함 5건 정리)
+- 맥락: 사용자가 #36 작업 직후 "한번 더 검증이 필요할꺼 같은데?" 직감 표명 → AI 가 V1~V7 7개 항목 자가 점검 → **잔존 결함 5건 추가 발견**. 가장 중요: V2 (audit 의 CL-05b 가 정책변수 2개만 점검해 미국 마감변수 5개 [`us_treasury_10y, us_breakeven_10y, vix, sp500, dxy`] 의 timing leak 누락 — KR 종가 15:30 KST < US 종가 06:00 KST 다음날). 사용자 직감으로 audit 도구의 미완 발견.
+- 잘 맞은 부분: V3 (LOG 카운트 36=36 정합), V5 (A0 ablation script 의 `diff().shift(1)` + `delta_y_bp[t]` 라벨 의미가 진정한 1-step ahead causal forecast), V7 audit 재실행 결과 (CL-05b ❌ + CL-05c ❌ 두 건의 잔존 결함을 정확히 보고, 5개 미국 마감변수 모두 raw[t-1] vs raw[t] 비교로 leak 정량화) 가 모두 정확. 사용자의 "한번 더 검증" 직감이 정확히 audit 도구의 미완을 짚었음.
+- 틀렸거나 부적절했던 부분: AI 가 #36 작업 시 V2 를 빠뜨린 이유 — (a) #35 L2 진단에서 "정책변수 lag 미적용" 만 강조하고 L4 (US timing leak) 는 V6 점검에서 "영향 미미" 로 판단해 audit 에 반영 안 함. (b) audit 도구는 *규칙 위반 자체를 정직하게 보고*해야 하는데 AI 가 "영향 크기" 를 우선해 검증 우선순위를 잘못 잡음. 이는 #35 의 "AI 의 검증 우선순위 오류" 패턴이 #36 에서 한 번 더 반복됐음을 의미. 또한 V4 마크다운의 "t-1 까지 정보" 표현이 raw LSTM 코드(`X_arr[t-lookback+1 : t+1]` → t 까지 사용)와 미세 불일치 — 이전 정정에서 *의도된 1-step ahead* 와 *실제 contemporaneous 한계* 를 혼동.
+- 수정 내용:
+  - **V1** `notebooks/02b_preprocess_baseline.ipynb` L216 — `Δy_{t+1} = (y_{t+1} − y_t) × 100` → `Δy_t = (y_t − y_{t-1}) × 100   # 1-step ahead forecast (계획서 §2.1·§2.2)` 로 정정
+  - **V2** `scripts/04_leakage_audit.py` — **CL-05c 신설**: 미국 마감변수 5개 (us_treasury_10y, us_breakeven_10y, vix, sp500, dxy) 의 raw[t-1] 강제 직접 검증. 재실행 결과 5개 모두 ❌ (timing leak 정량 보고)
+  - **V4** `notebooks/04_lstm_quantile.ipynb` §3 마크다운 — "t-1 까지 정보" → "t 까지 (raw LSTM 의 잔존 contemporaneous 한계, CL-05b·CL-05c 결함 명시) → A0 에서 진정한 t-1 으로 교체" 로 정직한 표현. CL-05b/CL-05c/contemporaneous/A0/reference baseline 5개 키워드 모두 포함
+  - **V6** `scripts/04_leakage_audit.py` CL-04 anti_pattern — `r"DataLoader|batch_first"` → `r"DataLoader\("` 정밀화 (batch_first 가 무관 줄 false negative 위험 차단)
+  - **V7** `docs/ablation_plan_w3.md` — 옛 A1/A2/A3 명명을 A1' (Δkrw_usd[t-1]) / A2' (Δkospi[t-1]) / A3' (Δkr_ppi[t-1]) 로 일관 갱신, 결과 보고 표도 새 명명 + Dir_Acc 컬럼 + DM(HLN+Bonferroni) 명시 + 음수 채택 원칙 §3.2.c 인용
+  - 최종 audit 상태: ✅ 7건 (CL-01~05, CL-06, CL-07) / ❌ 2건 (CL-05b 정책변수 + CL-05c 미국 마감변수) — W4 raw LSTM 의 timing leak 잔존 결함이 audit 에서 *7개 변수 모두* 명시화됨
+- 수정 이유: 본 LOG 항목은 **메타-검증의 메타-검증** — 사용자 직감이 AI 의 검증 작업(#36) 자체에 미완이 있음을 발견한 사례. "검증 도구를 한 번 만들면 끝" 이 아니라 #30 → #36 → #37 의 3회 누적 강화가 필요했음을 보여줌. 안내문 §7 "AI 가 제안한 결과를 스스로 검증" 의 직격: AI 가 검증을 했지만 (a) #35 에서는 결과 부진 진단을 누락, (b) #36 에서는 audit 강화 시 변수 그룹 누락, (c) 두 번 모두 사용자 한 줄 질문으로 발견. 본 패턴 자체가 §11.8 차별화 포인트 (AI 사용 기록 14건+ 누적) 의 가장 강한 실증. 발표 서사: "audit 도구도 3회 강화 — CL-01~07 (W2) → CL-05b (W4 검증) → CL-05c (W4 메타-검증) → 잔존 결함 2건 (CL-05b/CL-05c) 명시화 → 메인 모델 A0 는 자동 해결".
 
 <!--
 이후 항목은 아래 템플릿 복사해서 추가:

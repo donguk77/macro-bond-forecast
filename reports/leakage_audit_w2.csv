@@ -1,0 +1,10 @@
+﻿CL,항목,상태,비고
+CL-01,월별 변수 발표일 시프트,✅,freeze 에 월별 변수 없음 → 본 검증 범위 N/A
+CL-02,Scaler train-only fit,✅,모든 scaler.fit() 이 X_train/train 변수에 한정
+CL-03,Lag/Rolling 현재시점 미포함,✅,모든 .rolling() 호출이 같은 줄에 .shift() 동반
+CL-04,TimeSeriesSplit 만 사용,✅,"KFold 사용 없음, shuffle=True 는 DataLoader 윈도우 셔플(허용)에 한정"
+CL-05,정책 변수 t-1 강제 (features_v1→features_with_lags),✅,"정책 변수 ['kr_base_rate', 'us_fed_funds'] 모두 features_v1.shift(1) 와 일치 (direct compare on 3,726 rows)"
+CL-05b,정책 변수 raw 단계 t-1 강제 (features_v1↔raw),❌,us_fed_funds raw[t-1] 강제 미적용 (raw[t] 가 더 일치) | kr_base_rate: vs raw[t-1] 99.1% / vs raw[t] 100.0% · us_fed_funds: vs raw[t-1] 78.5% / vs raw[t] 100.0%
+CL-05c,미국 마감변수 cross-market timing (KR 종가 < US 종가),❌,us_treasury_10y timing leak (raw[t] 사용); us_breakeven_10y timing leak (raw[t] 사용); vix timing leak (raw[t] 사용); sp500 timing leak (raw[t] 사용); dxy timing leak (raw[t] 사용) | us_treasury_10y: t-1 7.5% / t 100.0% · us_breakeven_10y: t-1 16.1% / t 100.0% · vix: t-1 0.5% / t 100.0% · sp500: t-1 0.0% / t 100.0% · dxy: t-1 0.0% / t 100.0%
+CL-06,Backward fill 금지,✅,bfill/backfill/양방향 보간 사용 없음
+CL-07,한국 휴장일 타겟 drop,✅,features_v1_candidate.csv 타겟 결측 0건
