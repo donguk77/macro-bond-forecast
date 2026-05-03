@@ -1,0 +1,4 @@
+strategy,total_return_%,sharpe_252,max_drawdown_%,win_rate_%,days_active
+Buy-and-Hold (always long),0.688,0.045,-9.456,49.472,663
+A0 LSTM (sign q50),85.504,5.941,-2.96,65.158,663
+Random ±1,9.248,0.602,-8.704,52.036,663
