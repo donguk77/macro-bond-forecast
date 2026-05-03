@@ -1,0 +1,10 @@
+quantile,comparison,mean_pinball_a0,mean_pinball_other,DM_HLN,p_value,NW_lag,bonf_alpha_0.0056,direction
+q05,A0_vs_Naive,0.432,1.7004,-14.407,0.0,6,OK,A0 wins
+q05,A0_vs_XGBoost,0.432,0.4832,-3.666,0.0003,6,OK,A0 wins
+q05,A0_vs_LSTM_raw,0.432,0.5108,-3.531,0.0004,6,OK,A0 wins
+q50,A0_vs_Naive,1.5466,1.6946,-7.093,0.0,6,OK,A0 wins
+q50,A0_vs_XGBoost,1.5466,1.6881,-6.747,0.0,6,OK,A0 wins
+q50,A0_vs_LSTM_raw,1.5466,1.6957,-7.042,0.0,6,OK,A0 wins
+q95,A0_vs_Naive,0.4373,1.6889,-14.001,0.0,6,OK,A0 wins
+q95,A0_vs_XGBoost,0.4373,0.5077,-3.094,0.0021,6,OK,A0 wins
+q95,A0_vs_LSTM_raw,0.4373,0.5256,-3.201,0.0014,6,OK,A0 wins
