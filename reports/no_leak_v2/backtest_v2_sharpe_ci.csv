@@ -1,0 +1,6 @@
+strategy,sharpe,sharpe_CI_low,sharpe_CI_high,sharpe_CI_excludes_0
+S0_BuyHold,0.757,-0.471,1.98,False
+S1_SignQ50,0.751,-0.408,1.971,False
+S2_ConfFilter,2.073,1.084,2.925,True
+S3_VolTarget,0.28,-0.883,1.493,False
+S4_DualQuantile,,,,False

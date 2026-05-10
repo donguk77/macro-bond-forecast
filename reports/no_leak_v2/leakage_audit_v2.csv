@@ -1,0 +1,12 @@
+CL,항목,상태,비고
+CL-01,월별 변수 발표일 시프트,✅,v2 features 에 월별 변수 없음 → N/A
+CL-02,Scaler train-only fit,✅,14/15/16 모두 X_train/train 으로만 fit (v2 grep)
+CL-03,Lag/Rolling 현재시점 미포함,✅,모든 .rolling() 이 같은 줄에 .shift() 동반
+CL-04,TimeSeriesSplit 만 사용,✅,KFold/shuffle=True 미사용 (DataLoader same-line/multi-line 제외)
+CL-05,정책 변수 t-1 강제 (raw 단계),✅,kr_base_rate: t=0.991 / t-1=1.000; us_fed_funds: t=0.787 / t-1=1.000
+CL-05c,미국 마감 cross-market timing,✅,us_treasury_10y: t=0.075 / t-1=1.000; us_breakeven_10y: t=0.161 / t-1=1.000; vix: t=0.005 / t-1=1.000; sp500: t=0.000 / t-1=1.000; dxy: t=0.000 / t-1=1.000
+CL-06,Backward fill 금지,✅,bfill/양방향 보간 사용 없음
+CL-07,한국 휴장일 타겟 drop,⚠️,kr_treasury_10y 컬럼 없음 (v2 는 lag/roll feature 만 보존)
+CL-08,Train-only 통계량 (위기 더미),✅,train 위기 비율 = 20.1% (목표 20%)
+CL-10,환율 분리 (입력 제외),✅,krw_usd 입력에 없음
+NEW,새 변수 5개 모두 존재,✅,5/5 존재

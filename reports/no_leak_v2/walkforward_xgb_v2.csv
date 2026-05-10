@@ -1,0 +1,7 @@
+fold,stage,dir_acc_q50,coverage_90,cqr_Q_hat,n_cal,model
+fold1,raw,0.5932,0.8776,1.2793,119,"XGB(q,v2)"
+fold1,CQR,0.5932,0.9325,1.2793,119,"XGB(q,v2)"
+fold2,raw,0.5949,0.7881,-1.1704,118,"XGB(q,v2)"
+fold2,CQR,0.5949,0.7013,-1.1704,118,"XGB(q,v2)"
+fold3,raw,0.6416,0.8531,6.6307,120,"XGB(q,v2)"
+fold3,CQR,0.6416,0.9843,6.6307,120,"XGB(q,v2)"

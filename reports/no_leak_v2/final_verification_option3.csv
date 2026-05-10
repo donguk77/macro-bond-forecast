@@ -1,0 +1,15 @@
+check,status,evidence
+A.1 presentation_v2_revisions.md 정정 적용,✅ PASS,all 9 needles found
+A.2 domain_knowledge.md Q19a/Q19b 추가,✅ PASS,all 4 needles found
+A.3 comparison_v0_v1_v2.md §8a 신설 + 산출물 갱신,✅ PASS,all 5 needles found
+A.4 FINAL_option3_summary.md 신설,✅ PASS,all 4 needles found
+B.1 single-split dir_acc = 0.6113,✅ PASS,csv = 0.6113
+B.2 3-fold 평균 dir_acc ≈ 0.6099,✅ PASS,재계산 = 0.6099
+B.3 Pooled DM=-8.78 + p<0.0167,✅ PASS,"DM=-8.782, p=0.0000"
+B.4 leakage_audit_v2 0 FAIL,✅ PASS,"PASS=10, FAIL=0"
+B.5 verification_v2 13/13 PASS,✅ PASS,"PASS=13, FAIL=0, total=13"
+C.1 package_a_verification.md 보존,✅ PASS,all 5 needles found
+C.2 covid_robustness_check.md 보존,✅ PASS,all 1 needles found
+D. 산출물 파일 모두 존재,✅ PASS,all 35 files present
+E. leakage audit fresh re-run exit 0,✅ PASS,"exit=0, last lines: [save] reports/no_leak_v2/leakage_audit_v2.csv |  | 🟢 audit 통과 — downstream 학습 진행 가능"
+F. 노트북 08 모든 code cells 실행됨,✅ PASS,"code cells=11, executed=11"

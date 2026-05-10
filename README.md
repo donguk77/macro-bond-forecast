@@ -5,33 +5,70 @@
 
 거시경제 지표 8개를 입력으로 한국 국고채 10년물 **일별 변화량 `Δy_t = (y_t − y_{t-1}) × 100` (bp)** 을 분위수 회귀(q=[0.05, 0.5, 0.95])로 예측한다. 점추정 외에 90% 예측 구간을 함께 제공하고, SHAP 으로 거시 변수의 시차 효과를 정량화한다.
 
-자세한 설계는 `docs/project_plan.md` (계획서 v5.1) 참고.
+자세한 설계는 `채권금리예측_프로젝트계획서_v5_4_1.docx` (저장소 외부 — 최신 final) 참고. `docs/project_plan.md` 는 v5.1 시점 스냅샷이며 v5.2~v5.4.1 patch 이력은 `docs/project_plan_changelog.md` 참조.
 
 ---
 
-## 핵심 결과 (test 구간 mean ± std)
+## 핵심 결과 — 옵션 3: XGBoost 분위수 회귀 + CQR (no_leak v2)
 
-| 지표 | A0 LSTM (Δfeature[t-1]) | Naive (Δŷ=0) | 평가 |
-|------|--------------------------|---------------|------|
-| **RMSE q50 (bp)** | **4.195 ± 0.030** | 4.647 | **-9.7%** ✅ |
-| **Coverage 90%** | **0.902 ± 0.014** | — | 목표 정확 ✅ |
-| **Dir_Acc q50** | **0.638 ± 0.011** | — | 목표 0.55 +15.4%p ✅ |
+> v0 → v1 → v2 누수 발견·정정·회복 history. 자세한 비교: `reports/no_leak_v2/comparison_v0_v1_v2.md` · 종합 요약: `reports/no_leak_v2/FINAL_option3_summary.md`.
 
-### DM test (HAC + HLN + Bonferroni α*=0.0167) — **3/3 모두 유의**
+### Test 성능 (XGBoost CQR, 2023-2025)
+
+| 지표 | single-split | 3-fold 평균 | Pooled | 목표 | 평가 |
+|------|--------------|-------------|--------|------|------|
+| **방향성 정확도** | 0.6113 | 0.6099 ± 0.0275 | **0.6178** | ≥ 0.55 | **+6.78%p ✅** (학술 합격선 53% 대비 +8.78%p) |
+| **Coverage 90% (CQR)** | 0.8573 | 0.8727 ± 0.1507 | — | 0.87~0.93 | △ -1.3%p (CQR 한계 인정, ACI 후속 검토) |
+| **Sharpness (bp)** | 11.73 | — | — | 좁을수록 | ✅ |
+| **RMSE q50 (bp)** | 4.480 | — | 4.721 | < Naive | ✅ -3.7% (single, Naive 4.65) / -2.8% (Pooled, Naive 4.86) |
+
+### DM test (HAC + HLN + Bonferroni) — Naive 대비 통계적 우위
 
 | 비교 | DM_HLN | p-value | Bonf 유의 |
 |------|--------|---------|-----------|
-| A0 vs Naive | -6.805 | <0.0001 | ✅ |
-| A0 vs XGBoost | -6.963 | <0.0001 | ✅ |
-| A0 vs LSTM raw | -6.714 | <0.0001 | ✅ |
+| XGBv2 vs Naive (single) | -6.23 | <0.0001 | ✅ (α=0.025) |
+| XGBv2 vs ARIMA (single) | -6.54 | <0.0001 | ✅ (α=0.025) |
+| **XGBv2 vs Naive (Pooled 3-fold)** | **-8.78** | **<0.0001** | ✅ (α=0.0167) |
+
+### 실무 시뮬레이션 — Backtest (XGB v2, 정직 보강판)
+
+> 1차 단순 backtest (`reports/no_leak_v2/backtest_v2.csv`, scripts/23) 는 **carry 미반영 + 단일 split** 한계로 Sharpe 2.42 (낙관). Level B 보강 (`reports/no_leak_v2/backtest_v2_advanced.csv`, scripts/24) 으로 정직 결과 산출.
+
+#### Single-split (test 2023-2025, carry+convexity+cost 1bp 보강)
+
+| 전략 | Total Return | Sharpe (252) | MDD | Win Rate | 거래수 |
+|------|------|------|------|------|------|
+| S0 Buy-and-Hold | +12.42% | 0.76 | -7.21% | 50.6% | 0 |
+| S1 SignQ50 (매일 매매) | +12.10% | 0.75 | -11.25% | 52.2% | 303 |
+| **S2 ConfFilter (\|q50\|>1bp만 매매)** | **+13.43%** | **2.07** | **-1.43%** | 40.9% | 151 |
+| S3 VolTarget | +3.71% | 0.28 | -11.12% | 52.1% | 414 |
+
+- **S1 단순 매매 + 1bp cost ≈ Buy-and-Hold** (carry+거래비용 흡수로 alpha 사라짐)
+- **S2 ConfFilter 가 가장 robust** — 확신 있을 때만 매매하는 것이 일별 매매보다 안정 (Sharpe 2.07, MDD -1.43%)
+
+#### Walk-forward 3-fold (정직 검증)
+
+| Fold | 기간 | dir_acc | S2 Sharpe |
+|------|------|---|---|
+| fold1 | 2020 (코로나) | 0.564 | -1.15 |
+| fold2 | 2021-22 (인상기) | 0.535 | -0.14 |
+| fold3 | 2023-25 | 0.619 | +1.75 |
+| **Pooled** | 전체 | — | **+0.62 [-0.18, +1.35]** (95% bootstrap CI) |
+
+- Pooled Sharpe CI 가 0 포함 → **백테스트 차원에서는 통계적 우위 입증 어려움**
+- 단, **모델 자체의 통계 우위 (DM=-8.78 Pooled, p<0.0001 Bonferroni 통과) 는 유효**
+- 즉 "모델은 통계적으로 정확하지만 거래비용 마진은 얇다" — 정직한 그림
+
+→ 자세한 분석: `reports/no_leak_v2/backtest_v2_advanced.csv`, `walkforward 결과 backtest_v2_walkforward.csv`
 
 ### 차별화 포인트
 
 1. **거시경제 도메인** — 학생 프로젝트에서 드문 채권/금리 (자산운용·증권·중앙은행 어필)
-2. **부진 → 진단 → 회복 서사** (W4 raw 4.535 → A0 4.195) — 안내문 §9 오류 분석 모범 사례
-3. **DM test 3/3 p<0.0001** — 학부 7주 압도적 통계 입증
-4. **메타-검증 5회 누적** (#30 → #36 → #37 → #40 → #43) — audit 도구 자체의 자가 검증
-5. **VALIDATION_LOG 43건** = 안내문 최소 3건의 **14.3배**
+2. **누수 발견·정정·회복 정직성 서사** — v0 dir 65% (학술 합격선 +12%p로 비현실적 의심) → CL-05c 미국 마감변수 timing leak 발견 → v1 정정 후 49.8% (랜덤 수준, 누수 부산물 입증) → v2 새 변수 5개 + XGB + CQR로 dir **0.6178 (Pooled)** 정직 회복. 안내문 §9 "AI 결과 자체 검증" 원칙 직격
+3. **walk-forward 3-fold + Pooled DM=-8.78 p<0.0001 Bonferroni 통과** — single-split 의존성 해소, 결과 안정성·일반성 입증 (`reports/no_leak_v2/walkforward_summary_v2.md`)
+4. **개선안 시도·반증 history** — ACI / rolling vol 추가 시도가 데이터로 반증되어 채택 X (`reports/no_leak_v2/package_a_verification.md`). 끼워맞추기 회피, 발표 자산화
+5. **메타-검증 5회 누적** (#30 → #36 → #37 → #40 → #43) — audit 도구 자체의 자가 검증
+6. **VALIDATION_LOG 43건** = 안내문 최소 3건의 **14.3배**
 
 ---
 
@@ -123,13 +160,13 @@ jupyter lab
 
 | 주차 | 작업 | 핵심 결과 |
 |------|------|-----------|
-| **1** | 광역 22개 수집, EDA, XGBoost+TreeExplainer Hello World | freeze 9 변수 결정, σ(Δy)=4.0 bp 확인 |
+| **1** | 광역 22개 수집, EDA, XGBoost+TreeExplainer Hello World | 9개 candidate freeze (sp500 등), σ(Δy)=4.0 bp 확인 |
 | **2** | 상관·VIF·Granger 분석, 전처리, Naive/ARIMA, 누수 audit | 7/7 ✅ (false positive 4건 fix, LOG #30) |
-| **3** | 변수 freeze 8개 (kospi 제외), XGBoost 분위수 회귀 | test RMSE 4.644, monotonicity 0건 crossing |
+| **3** | 변수 freeze 8개 확정 (kospi 제외), XGBoost 분위수 회귀 | test RMSE 4.644, monotonicity 0건 crossing |
 | **4** | LSTM 분위수 회귀 (raw) + LSTM-SHAP DeepExplainer | RMSE 4.535 (정체), 부진 진단 → LOG #35 |
-| **5** | A0 (Δfeat[t-1]) 회복 + grid 5×5 + A1' ablation + CQR | **RMSE 4.195 (-7.5%), Coverage 0.902, Dir 0.638** |
-| **6** | 분위수별 SHAP + DM test + 오류 분석 4축 + 위기구간 | **DM 3/3 p<0.0001**, 채널 strong 1/1 (kr_base_rate) |
-| **7** | Streamlit 1페이지 + Jupyter 종합 데모 + 발표 자료 | `app/streamlit_app.py`, `notebooks/07_final_demo.ipynb` |
+| **5** | A0 (Δfeat[t-1]) 회복 시도 + grid 5×5 + A1' ablation + CQR | A0 dir 0.638 — 학술 합격선 +12%p 비현실 → audit 트리거 |
+| **6** | 분위수별 SHAP + DM test + 오류 분석 4축 + 위기구간 + **CL-05c 누수 발견** | v1 정정 후 dir 49.8% (랜덤), us_treasury_10y top-1 SHAP 도 누수 부산물 입증 |
+| **7** | **v2 회복** (새 변수 5 + XGB + CQR + walk-forward 3-fold) + Streamlit + 종합 데모 | **dir 0.6178 (Pooled), DM=-8.78 Bonferroni 통과**, `notebooks/08_v2_no_leak_pipeline.ipynb`, `app/streamlit_app.py`, `notebooks/07_final_demo.ipynb` |
 
 ---
 
@@ -148,6 +185,18 @@ jupyter lab
 | 글로벌 달러 | `dxy` | FRED | EM 자본유출 |
 
 > 환율(`krw_usd`)은 정부 개입 구조로 의도적 제외 (§3.4). A1' 환율 ablation 결과 Δ≈0 으로 **정량 입증** (LOG #39).
+
+### v2 (no_leak) 추가 변수 5개 — `docs/features_v2_justification.md`
+
+| 변수 | 정의 | 도메인 정당화 |
+|------|------|---------------|
+| `spread_10y_t1` | `(us10y - kr10y).shift(1)` | EM capital flow 1차 동인 (Caballero & Krishnamurthy 2009) |
+| `delta_us10y_t1` | `us10y.diff().shift(1)` | 미국 → 한국 시차 모멘텀 (~16시간) |
+| `delta_vix_t1` | `vix.diff().shift(1)` | 위험회피 모멘텀 — 안전자산 채널 |
+| `delta_dxy_t1` | `dxy.diff().shift(1)` | EM 자본유출 모멘텀 |
+| `crisis_dummy` | `(vol_20d > train-only 80%ile).shift(1)` | 위기 정량 라벨 (계획서 §4.4) |
+
+→ 사전 기록(`docs/features_v2_justification.md`) 으로 사후합리화 방지. v2 입력 = 8 freeze + 5 new = **13개**.
 
 ---
 

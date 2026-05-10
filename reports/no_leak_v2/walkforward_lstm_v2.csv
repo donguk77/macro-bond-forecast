@@ -1,0 +1,10 @@
+fold,seed,n_epochs,dir_acc_q50,model
+fold1,42,36,0.5072,"LSTM(q,v2)"
+fold1,123,26,0.5604,"LSTM(q,v2)"
+fold1,2024,11,0.5024,"LSTM(q,v2)"
+fold2,42,30,0.5864,"LSTM(q,v2)"
+fold2,123,30,0.6068,"LSTM(q,v2)"
+fold2,2024,33,0.5773,"LSTM(q,v2)"
+fold3,42,36,0.6546,"LSTM(q,v2)"
+fold3,123,26,0.6591,"LSTM(q,v2)"
+fold3,2024,34,0.6697,"LSTM(q,v2)"

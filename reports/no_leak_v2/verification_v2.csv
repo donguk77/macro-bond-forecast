@@ -1,0 +1,14 @@
+check,status,evidence
+1. leakage audit re-run exit 0,✅ PASS,"exit=0, last lines: 🟢 audit 통과 — downstream 학습 진행 가능"
+2. US close vars all shift(1) applied (raw vs v2 spot check),✅ PASS,us_treasury_10y: t-1=1.000 t=0.075 OK; us_breakeven_10y: t-1=1.000 t=0.161 OK; vix: t-1=1.000 t=0.005 OK; sp500: t-1=1.000 t=0.000 OK; dxy: t-1=1.000 t=0.000 OK
+3. XGB v2 single dir_acc 0.6113 claim,✅ PASS,"claimed=0.6113, actual_raw=0.6113, actual_CQR=0.6113"
+3b. XGB v2 single Coverage CQR 0.8573 claim,✅ PASS,"claimed=0.8573, actual_raw=0.8017, actual_CQR=0.8573"
+4. 3-fold 평균 dir_acc 0.6099 claim,✅ PASS,"claimed=0.6099±0.0269, actual=0.6099±0.0275"
+5. Pooled DM_HLN -8.78 claim,✅ PASS,"claimed=-8.782, actual=-8.782"
+5b. Pooled p-value < 0.0167 (Bonferroni) claim,✅ PASS,"p_value=0.0000, Bonferroni α=0.0167"
+6. XGB 모델 로드 후 dir_acc 재현 = csv 값과 일치,✅ PASS,"csv dir_acc raw=0.6113, 재현=0.6113"
+6b. XGB 모델 로드 후 Coverage raw 재현,✅ PASS,"csv cov raw=0.8017, 재현=0.8017"
+7. 노트북 08 cells 모두 실행됨,✅ PASS,"total cells=24, code cells=11, executed=11"
+7b. 5 figures 모두 생성됨,✅ PASS,"all 5 present, sizes: 01_dir_acc_3stages.png=42164B, 02_cqr_effect.png=48142B, 03_walkforward_dir_acc.png=36012B, 04_dm_test.png=28744B, 05_summary_4panel.png=79056B"
+8. 새 변수 5개 모두 존재,✅ PASS,"present=5/5: ['spread_10y_t1', 'delta_us10y_t1', 'delta_vix_t1', 'delta_dxy_t1', 'crisis_dummy']"
+8b. 위기 더미 train 비율 ≈ 20%,✅ PASS,train crisis rate = 0.2010 (목표 0.20)

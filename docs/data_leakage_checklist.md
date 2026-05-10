@@ -59,6 +59,23 @@
 - **사유**: 한은 금통위/FOMC 발표 당일 결과를 input 으로 쓰면 누수. 발표는 보통 장중 또는 마감 후.
 - **검증 코드**: feature 생성 코드의 정책 변수 처리 부분 직접 확인.
 
+### CL-05c. 미국 마감변수 cross-market timing leak (2026-05-06 추가)
+- [ ] `us_treasury_10y`, `us_treasury_2y`, `us_breakeven_10y`, `vix`, `us_hy_oas`, `wti_oil`, `sp500`, `dxy` 모두 `t-1` 값으로 사용?
+- [ ] feature 생성 시 위 변수 모두 `.shift(1)` 적용?
+- **사유**: KR 종가(15:30 KST t일) 시점에 t일 미국 종가는 아직 형성 전 (다음날 새벽 ~05:30 KST). raw[t] 사용 시 미래 정보 누수.
+- **발견 사례**: v1 학습 결과 dir_acc 65% 발생. 학술 합격선 53% 대비 +12%p 비현실적. audit log 에서 발견 (us_treasury_10y, vix, sp500, dxy 모두 raw[t] 100% 일치).
+- **정정 영향**: dir_acc 63.75% → 49.82% (-13.93%p), Coverage 90.2% → 83.0%.
+- **검증 코드**:
+  ```python
+  # raw[t-1] 일치율 ≥ 0.99, raw[t] 일치율 < 0.50 이어야 정상
+  US_CLOSE = ['us_treasury_10y', 'us_breakeven_10y', 'vix', 'sp500', 'dxy']
+  for v in US_CLOSE:
+      r1 = (df[v] == raw[v].shift(1)).mean()
+      r0 = (df[v] == raw[v]).mean()
+      assert r1 >= 0.99 and r0 < 0.50, f'{v}: t-1={r1:.3f} / t={r0:.3f}'
+  ```
+- **참고**: `scripts/17_full_audit_v2.py` 자동 점검 포함.
+
 ---
 
 ## 🟠 권장 (놓치면 점수 깎임)
