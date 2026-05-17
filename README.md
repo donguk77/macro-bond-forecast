@@ -46,7 +46,7 @@
 - **S1 단순 매매 + 1bp cost ≈ Buy-and-Hold** (carry+거래비용 흡수로 alpha 사라짐)
 - **S2 ConfFilter 가 가장 robust** — 확신 있을 때만 매매하는 것이 일별 매매보다 안정 (Sharpe 2.07, MDD -1.43%)
 
-#### Walk-forward 3-fold (정직 검증)
+#### Walk-forward 3-fold (정직 검증) — backtest run, scripts/24, n_estimators 87/215/53
 
 | Fold | 기간 | dir_acc | S2 Sharpe |
 |------|------|---|---|
@@ -54,6 +54,8 @@
 | fold2 | 2021-22 (인상기) | 0.535 | -0.14 |
 | fold3 | 2023-25 | 0.619 | +1.75 |
 | **Pooled** | 전체 | — | **+0.62 [-0.18, +1.35]** (95% bootstrap CI) |
+
+> ⚠️ 위 dir_acc (0.564/0.535/0.619) 는 backtest walk-forward (scripts/24, n_estimators 87/215/53) 결과로, 위 §"Test 성능" 표의 model walk-forward (scripts/16, n_estimators 200/400/100) 의 0.5932/0.5949/0.6416 (평균 0.6099, Pooled 0.6178) 와는 별개 run 입니다. 같은 fold·feature·HP grid 이지만 early-stopping 결과 n_estimators 가 달라 dir_acc 가 약 0.04 차이. 자세한 분석은 `reports/no_leak_v2_honest/META_AUDIT_AND_DOC_CONSISTENCY_2026-05-17.md` §B-1 참조.
 
 - Pooled Sharpe CI 가 0 포함 → **백테스트 차원에서는 통계적 우위 입증 어려움**
 - 단, **모델 자체의 통계 우위 (DM=-8.78 Pooled, p<0.0001 Bonferroni 통과) 는 유효**
@@ -220,6 +222,22 @@ jupyter lab
 - 커밋: `[type] 짧은 요약` — type: `feat`/`fix`/`docs`/`data`/`eda`/`model`
 - **절대 커밋 금지**: `.env`, `data/`, `models/*.pt|*.pkl`, `.venv/`
 - AI 활용은 `AI_USAGE_LOG.md` 에, 검증 이력은 `VALIDATION_LOG.md` 에 기록
+
+---
+
+## 자가 점검 history (2026-05-17 4축 메타 검증)
+
+v0→v1→v2 history 에 더해 발표 직전 4축 자가 점검을 추가 수행:
+
+| # | 점검 영역 | 핵심 발견 | 산출 |
+|---|---|---|---|
+| #1 | 메인 v2 모델 (scripts 14~22) | P0 4건 (HP 누수·cal⊂val·단일 시드·kospi 불일치) → honest 재실행 → **dir 0.6163 (Δ=-0.15%p, robustness 입증)** + **bootstrap CI [0.5927, 0.6421] 학술 합격선 0.53 통계 우위 정량 입증** | `reports/no_leak_v2_honest/CODE_REVIEW_AND_FIX_HISTORY.md` + `scripts/25_honest_walkforward.py` |
+| #2 | Path A 실험 (LGB Sharpe 2.02) | PA Critical 3건 (fold1 거래 0건, 5.5% participation, HP cross-fold 평균) → 메인 대안 → **보조 실험 격하** | `experiments/path_a_model/CODE_REVIEW_PATH_A_2026-05-17.md` |
+| #3 | Backtest (scripts 23, 24) | BT 14건 (HP 누수 재발, VolTarget lookahead, i.i.d. bootstrap, cost 2× 차이 등) → 메인 결론 영향 미미 | `reports/no_leak_v2/BACKTEST_CODE_REVIEW_2026-05-17.md` |
+| #4 | Audit 도구 + 문서 정합성 | **기존 audit 가 P0/Critical 11건 중 0건 잡음** (사각지대 6 유형 공식화) + README 표 헤더 모호성 1건 | `reports/no_leak_v2_honest/META_AUDIT_AND_DOC_CONSISTENCY_2026-05-17.md` |
+
+→ 안내문 §7 "AI 결과 자체 검증" 의 **7단계 메타 검증 사례** (#30→#36→#37→#40→#43→#48~50→#51) 완성.
+→ 메인 발표 수치 (dir 0.6178, DM -8.78, Sharpe 0.62) 는 변경 없음. 점검 결과 robustness 입증 + 한계 정직 인정 + audit 도구 사각지대 공식화.
 
 ---
 

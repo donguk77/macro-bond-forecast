@@ -442,6 +442,73 @@
   - audit 도구 강화 권고 (deferred): `scripts/04_leakage_audit.py` 에 CL-08 *"입력 변수 단변량 |corr| 한계"* 추가 검토 (|r|>0.5 시 ❌). 단 이번 프로젝트는 학부 7주 마감이라 deferred.
 - 수정 이유: 사용자 의문이 *발표에서 가장 자주 들어오는 단골 질문* 의 두 핵심을 정확히 짚음 — (1) data leakage 의심 (2) timing alignment 의심. 본 LOG 가 두 질문에 대한 **데이터 기반 정량 답변** 제공. *"믿어달라"* 가 아닌 *"데이터로 입증"* 으로 frame. 또한 누수 audit 의 사각지대 (variable-level answer key check) 식별 — 향후 다른 시계열 ML 프로젝트 시 동일 점검 패턴 재사용 가능. **§11.8 차별화 포인트가 47건** + 사용자 직감 9회 누적 (#30→#36→#37→#40→#43→#44→#45→#46→#47). 학부 7주 압도적 누적.
 
+### #48 | 2026-05-17 | 자가 점검 #1 (메인 v2 모델)
+- 맥락: 사용자 *"코드 점검이나 로직 점검을 해보는거 어떄?"* — 발표 직전 메인 v2 파이프라인 (scripts 14~22) 4축 점검 (누수·통계·코드·개선).
+- 잘 맞은 부분: 정직성 서사 (v0→v1→v2), 코드 가독성, audit 자동화 스크립트, 평가 함수 분리, monotonicity sort 후처리.
+- 틀렸거나 부적절했던 부분 (P0 4건):
+  - P0-1: scripts/16 의 `XGB_BEST` 가 single-split (val=2022) grid 결과 hardcoded → fold2 입장에서 미래정보 누수 (val=2022 ⊂ test=2021-22)
+  - P0-2: fold1/2/3 모두 cal ⊂ val → early stopping 이 cal 까지 fitting 에 사용 → CQR exchangeability 위반
+  - P0-3: XGB seed=42 단일 (LSTM 은 3시드) — 비교 불공정
+  - P2-1: features_v2_no_leak.csv 에 kospi 존재 (freeze_final_w3.md "kospi 제외" 와 불일치)
+- 수정 내용:
+  - 새 스크립트 `scripts/25_honest_walkforward.py` 작성 (기존 16 무수정 보존)
+    - per-fold 2×2 grid search (P0-1 정정), val/cal/test disjoint + runtime assert (P0-2 정정), 3 seed 루프 (P0-3 정정)
+    - Newey-West lag 자동 + dir_acc block bootstrap CI (P1-2, P1-3 추가)
+  - 실행 → Pooled dir 0.6178 → **0.6163 (Δ=-0.15%p)**, DM -8.78 → **-8.60** (Bonferroni 통과 유지)
+  - 신규 **bootstrap CI [0.5927, 0.6421]** — 하한 > 학술 합격선 0.53 → 통계 우위 정량 입증
+  - 부수 발견: 3 seed 결과 완전 동일 → XGB subsample/colsample 기본 1.0 으로 deterministic. seed 검증 무의미 (강점으로 활용 가능)
+  - `reports/no_leak_v2_honest/CODE_REVIEW_AND_FIX_HISTORY.md` 작성
+- 수정 이유: P0 정정에도 결과 거의 동일 = **v2 결과의 robustness 정량 입증**. 발표에서 "검증해도 무너지지 않음" 메시지로 활용. P2-1 kospi 는 수정 시 v2 결과 전체 무효화 → 문서화로 처리.
+
+### #49 | 2026-05-17 | 자가 점검 #2 (Path A 실험)
+- 맥락: 메인 점검 P0-1 발견 → 동일 패턴이 Path A LGB Sharpe 2.02 에도 있을 가능성 → 독립 점검.
+- 잘 맞은 부분: Cross-asset validation (KOSEF/KODEX 10Y 일관, 3Y 붕괴 검증), Adversarial test 시도, Per-fold + Pooled 분리 보고, Cost 1bp/3bp 시나리오.
+- 틀렸거나 부적절했던 부분 (PA Critical 3건 + Medium 4건):
+  - PA-1: experiments/path_a_model/scripts/04 의 `single_best` 가 3-fold 평균 val_pinball 로 선택 → fold1 HP 가 fold2/3 (미래) 데이터에 의존
+  - PA-2: lgb_robust_single.csv fold1 Sharpe 빈칸 — VIX>20 throughout 2020 → regime filter 가 모든 거래 차단 → **fold1 거래 0건**
+  - PA-3: multi_model_results.csv days_active=77 / total 1410 = **5.5% participation** → "Sharpe 2.02" 는 95% zero PnL 에서 계산
+  - PA-4: TAU=1.5 (Path B test), VIX_THR=20 (Path E test) — 모두 같은 test set 결과로 사후 hardcode → cross-path data snooping
+  - PA-5/6: 기존 leak audit (shift, adversarial) 가 HP/pipeline-level 누수 못 잡음
+- 수정 내용:
+  - `experiments/path_a_model/CODE_REVIEW_PATH_A_2026-05-17.md` 작성 (11 섹션, 10건 이슈)
+  - `experiments/README.md` 결과 표 수정: "🏆 4중 검증 통과 = 진짜 alpha" → "🟡 부분 검증, 활성 빈도 5.5%, occasional 전략"
+  - 정직 비교: Path A annualized return ~3% ≈ v2 메인 — Sharpe 차이는 활성 빈도 차이의 산물, 본질적 alpha 차이 아님
+- 수정 이유: Path A 를 메인 대안 → 보조 실험 격하. 정직성 서사 강화 ("Path A 한계까지 정직 인정") — 안내문 §7 직격.
+
+### #50 | 2026-05-17 | 자가 점검 #3 (Backtest scripts 23, 24)
+- 맥락: 메인 P0-1 + Path A PA-1 의 HP 누수 패턴이 backtest 코드에도 있을 가능성 → 독립 점검.
+- 잘 맞은 부분: Convexity + Carry 모델링 (학부 backtest 에 드문 정직성), Cost sensitivity 5단계, 5 전략 다양화 (S0~S4), Walk-forward + Pooled 둘 다 보고, fold1·2 음수 Sharpe 정직 공개, PnL decomposition.
+- 틀렸거나 부적절했던 부분 (BT 14건 — Critical 2, Medium 4, Low 8):
+  - BT-1: scripts/24 `BEST_PARAMS` (n_estimators 87/215/53) 가 script 15 single-split 결과 hardcoded — walk-forward 도 메인 P0-1 과 동일 누수 패턴
+  - BT-2: scripts/24:197 S3 VolTarget 의 `rolling(20).std().shift(1).bfill()` 의 `.bfill()` 이 첫 20일을 미래 vol 로 채움 (lookahead)
+  - BT-3: Sharpe bootstrap CI 가 i.i.d. resampling → 시계열 autocorrelation 무시 → CI 약 1.5~2× 좁음
+  - BT-4: scripts/23 vs 24 의 cost 1bp 해석 2× 차이 (round-trip vs one-way) — line 152 (`/2`) vs line 236-238 (`/2` overwrite)
+  - BT-5~6: n_estimators fixed, CONFIDENCE_THRESHOLD_BP=1.0 hardcoded (Path B grid best 1.5 와 다름)
+  - BT-7~14: S4 DualQuantile 0건 거래, pos_change 두 줄 작성, days_active metric quirk 등
+- 수정 내용:
+  - `reports/no_leak_v2/BACKTEST_CODE_REVIEW_2026-05-17.md` 작성 (12 섹션, 14 이슈 + 영향 추산 + Q&A)
+  - 결함 합산 영향 추정: Pooled Sharpe 0.62 → 0.4~0.8 범위 (큰 변화 없음). **메인 결론 ("모델 통계 우위, 거래비용 마진 얇음") 유지**
+  - 재실행 X (발표 직전 위험 회피)
+- 수정 이유: backtest 도 메인 점검과 동일 패턴 확인 — 발견 자체가 "audit 도구 일관성" 입증. 결과 영향 미미하므로 발표 자료 수치 변경 불필요.
+
+### #51 | 2026-05-17 | 자가 점검 #4 (Audit 도구 자체 + 문서 정합성)
+- 맥락: 사용자 *"그래도 다른것도 점검을 해야 하는거 아니야?"* — 가장 가치 큰 영역 (audit 도구 사각지대 + 문서 정합성) 점검.
+- 잘 맞은 부분: scripts/04, 17 의 CL-01~10 feature-level 누수 검증은 견고함 (grep + 직접 비교, false positive 4건 fix history).
+- 틀렸거나 부적절했던 부분:
+  - **(A) Audit 사각지대**: 이번 4축 점검에서 발견한 P0/Critical 11건 (P0-1, P0-2, P0-3, PA-1~4, BT-1~4) **중 audit 가 잡은 것은 0건 (0%)**
+    - 본질적 원인 6 유형: HP origin tracking 불가, set 간 overlap 미검증, cross-script consistency 미검증, strategy execution audit 부재, 통계 방법론 평가 부재, cross-path snooping 미검증
+  - **(B) 문서 정합성 B-1**: README 의 "walk-forward 3-fold" 표가 두 다른 run (script 16 n=200/400/100 vs script 24 n=87/215/53) 의 수치를 같은 라벨로 혼합 → 독자 오해 가능
+  - B-3: plan.md (v5.3.12) ↔ docx (v5.4.1) 버전 차이 CHANGELOG 미반영
+  - B-5: experiments/README "🏆 4중 검증 통과" 표현이 #49 발견과 충돌
+- 수정 내용:
+  - `reports/no_leak_v2_honest/META_AUDIT_AND_DOC_CONSISTENCY_2026-05-17.md` 작성 (5 파트, 16건 분석)
+  - **CL-11~14 신규 audit 카테고리 제안**: HP origin tracking, Set disjoint enforcement, Cross-script parameter consistency, Strategy execution audit
+  - README line 51 표 헤더에 "backtest walk-forward, scripts/24, n_estimators 87/215/53" 명시 + 모호성 노트 추가
+  - README 끝에 "자가 점검 history" 섹션 신설 (#48~51 4축 요약)
+  - experiments/README.md 의 Path A 결과 표 + "🏆" 표현 정정 (#49 반영)
+  - plan_md/CHANGELOG.md 최상단에 v5.4/v5.4.1 docx 미반영 명시
+- 수정 이유: audit 도구의 사각지대를 학술적으로 공식화 → 발표에서 "이번 점검에서 audit 도구의 한계도 발견했습니다" 강력 정직성 자산. 안내문 §7 *"AI 결과 자체 검증"* 의 **7단계 메타 검증** (#30→#36→#37→#40→#43→#48~50→#51) 완성. **§11.8 차별화 포인트가 51건** + 자가 점검 4축 사례.
+
 <!--
 이후 항목은 아래 템플릿 복사해서 추가:
 
