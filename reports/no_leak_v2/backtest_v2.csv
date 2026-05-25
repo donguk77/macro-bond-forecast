@@ -1,5 +1,5 @@
 strategy,total_return_%,sharpe_252,max_drawdown_%,win_rate_%,days_active
-Buy-and-Hold (always long),2.728,0.166,-9.952,49.711,692
-"XGB v2 (sign q50, no cost)",62.728,3.934,-3.648,61.127,692
-"XGB v2 (sign q50, 1bp cost)",38.488,2.416,-4.824,56.528,697
-Random ±1,0.76,0.046,-11.928,51.301,692
+Buy-and-Hold (always long),12.422,0.757,-7.21,50.642,701
+"XGB v2 (sign q50, no cost)",60.583,3.791,-3.649,60.485,701
+"XGB v2 (sign q50, 1bp cost)",12.103,0.751,-11.249,52.211,701
+Random ±1,0.446,0.027,-12.27,51.641,701

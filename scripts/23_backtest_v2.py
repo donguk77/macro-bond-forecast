@@ -56,7 +56,8 @@ except Exception:
 
 # 파라미터
 D = 8.0  # KR 10y modified duration (~3.5% yield)
-TXN_COST_BP = 1.0  # 1bp per position change (round-trip 가정)
+C = 85.0  # KR 10y convexity
+TXN_COST_BP = 1.0  # 1bp per position change (편도)
 SPLIT = {
     'train': ('2010-01-01', '2020-12-31'),
     'cal':   ('2021-01-01', '2021-12-31'),
@@ -143,20 +144,41 @@ bt = pd.DataFrame({
     'q05': q05, 'q50': q50, 'q95': q95,
 }).reset_index(drop=True)
 
-# 전략별 일별 수익률
-bt['pnl_buyhold'] = -D * bt['y_true_bp'] / 10000  # always long
-bt['position_xgb_v2'] = np.sign(bt['q50']).astype(int)
-bt['pnl_xgb_v2_gross'] = bt['position_xgb_v2'] * bt['y_true_bp'] * D / 10000
+# 금리 레벨 로드 (캐리 계산용)
+raw_ecos = pd.read_csv(DATA / 'raw' / 'raw_ecos.csv', parse_dates=['date'])
+kr10y = (raw_ecos[raw_ecos['variable'] == 'kr_treasury_10y']
+         [['date', 'value']].rename(columns={'value': 'yield_10y'}))
+bt = bt.merge(kr10y, on='date', how='left')
 
-# 거래비용: 포지션 변경 시점에만 차감
-bt['position_change'] = bt['position_xgb_v2'].diff().fillna(0).abs() / 2  # 0 or 1
+dy = bt['y_true_bp'].values / 10000
+y_level = bt['yield_10y'].values
+
+# Buy-and-Hold (pos=-1: always long) — 가격 + 볼록성 + 캐리
+bh_pos = -np.ones(len(bt))
+bt['pnl_buyhold'] = (bh_pos * D * dy
+                     - bh_pos * 0.5 * C * dy**2
+                     - bh_pos * (y_level / 100) / 252)
+
+# XGB v2: Sign(q50) 포지션
+bt['position_xgb_v2'] = np.sign(bt['q50']).astype(int)
+pos = bt['position_xgb_v2'].values.astype(float)
+
+# Gross PnL: 가격 + 볼록성 + 캐리
+bt['pnl_xgb_v2_gross'] = (pos * D * dy
+                          - pos * 0.5 * C * dy**2
+                          - pos * (y_level / 100) / 252)
+
+# 거래비용: |Δpos| × cost_bp × D / 10000 (스크립트 24와 동일)
+bt['position_change'] = np.abs(np.diff(pos, prepend=pos[0]))
 bt['txn_cost'] = bt['position_change'] * TXN_COST_BP * D / 10000
 bt['pnl_xgb_v2_net'] = bt['pnl_xgb_v2_gross'] - bt['txn_cost']
 
 # Random ±1
 np.random.seed(42)
-random_sign = np.random.choice([-1, 1], size=len(bt))
-bt['pnl_random'] = random_sign * bt['y_true_bp'] * D / 10000
+random_sign = np.random.choice([-1, 1], size=len(bt)).astype(float)
+bt['pnl_random'] = (random_sign * D * dy
+                    - random_sign * 0.5 * C * dy**2
+                    - random_sign * (y_level / 100) / 252)
 
 
 def summarize(pnl: pd.Series, name: str):
