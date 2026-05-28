@@ -91,11 +91,21 @@ for fd in FOLDS:
     s_norm = np.maximum(q05c - ycal, ycal - q95c) / sig_cal
     Qn = qhat(s_norm)
 
+    # 온라인 롤링 conformal (W=125): 최근 W일 실현 conformity로 Q 매일 갱신 (누수 없음)
+    W = 125
+    buf = list(np.maximum(q05c - ycal, ycal - q95c))   # cal conformity로 초기화
+    on_lo = np.empty(len(yte)); on_hi = np.empty(len(yte))
+    for i in range(len(yte)):
+        Qo = qhat(np.array(buf[-W:]))
+        on_lo[i] = q05t[i] - Qo; on_hi[i] = q95t[i] + Qo
+        buf.append(max(q05t[i] - yte[i], yte[i] - q95t[i]))   # 오늘 실현 후 추가
+
     methods = {
-        'raw':   (q05t,            q95t),
-        'sym':   (q05t - Qs,       q95t + Qs),
-        'asym':  (q05t - Qlo,      q95t + Qhi),
-        'local': (q05t - Qn*sig_te, q95t + Qn*sig_te),
+        'raw':    (q05t,            q95t),
+        'sym':    (q05t - Qs,       q95t + Qs),
+        'asym':   (q05t - Qlo,      q95t + Qhi),
+        'local':  (q05t - Qn*sig_te, q95t + Qn*sig_te),
+        'online': (on_lo,           on_hi),
     }
     dates = sl('test').index
     vix_te = VIX.reindex(dates).values if VIX is not None else np.full(len(dates), np.nan)
@@ -123,17 +133,26 @@ y = out['y_true'].values
 print('\n=== 전체 풀 ===')
 print(f'{"method":7s} {"cov":>6s} {"width":>7s} {"IS":>7s} {"0배제율":>8s}')
 summ=[]
-for m in ['raw','sym','asym','local']:
+for m in ['raw','sym','asym','local','online']:
     cov,w,IS,e0 = metrics(y, out[f'{m}_lo'].values, out[f'{m}_hi'].values)
     summ.append({'method':m,'coverage':cov,'sharpness_bp':w,'interval_score':IS,'excl0_rate':e0})
     print(f'{m:7s} {cov:6.3f} {w:7.2f} {IS:7.2f} {e0:8.3f}')
 pd.DataFrame(summ).to_csv(REPORT_DIR/'cqr_v3_summary.csv', index=False)
 
+# fold별 coverage (조건부 진단)
+print('\n=== fold별 coverage / 폭 ===')
+for m in ['sym','online']:
+    line=f'{m:7s} '
+    for fold,g in out.groupby('fold'):
+        yy=g['y_true'].values; lo=g[f'{m}_lo'].values; hi=g[f'{m}_hi'].values
+        line+=f'{fold} cov={((yy>=lo)&(yy<=hi)).mean():.3f} 폭={np.mean(hi-lo):5.1f} | '
+    print(line)
+
 # 레짐별 coverage (VIX 중앙값 기준 고/저변동)
 if VIX is not None:
     med = np.nanmedian(out['vix'])
     print(f'\n=== 레짐별 coverage (VIX median={med:.1f}) ===')
-    for m in ['sym','asym','local']:
+    for m in ['sym','asym','local','online']:
         hi_mask = out['vix']>med; lo_mask=~hi_mask
         cov_hi = float(((y>=out[f'{m}_lo'])&(y<=out[f'{m}_hi']))[hi_mask].mean())
         cov_lo = float(((y>=out[f'{m}_lo'])&(y<=out[f'{m}_hi']))[lo_mask].mean())
