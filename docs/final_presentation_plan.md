@@ -118,14 +118,16 @@
 | G5. 위기 레짐 | 변동성 구조변화 | crisis_dummy | **crisis_dummy** |
 
 > - `us_breakeven_10y`(기대인플레=명목−실질)는 **명목 미국채에서 파생** → 미국 금리와 동조하므로 **G1**에 배정. G5는 `crisis_dummy` 단독(개념 일관성).
-> - `kospi`는 **VIF가 아니라 Granger p=0.57로 탈락**(VIF 1.11 정상). 트리는 비선형을 잡으므로 선형 Granger 탈락을 재검증할 가치 → **최종셋 복원 X, ablation/히스토그램(②B·⑥) 테스트 케이스로만** 포함. 성능이 안 오르면 "탈락을 성능 증거로 재확인", 오르면 복원 재고.
+> - ⚠️ **사실 정정 (코드 확인)**: 중간 서사는 'VIF/Granger로 22→8'이지만, **실제 v2 모델(`features_v2_no_leak.csv`)은 9 base(`kospi` 포함) + 5 파생을 모두 사용** — 거의 제거하지 않았다. `kospi`도 (Granger p=0.57임에도) 이미 모델에 들어있음(VIF 1.11). → "복원"이 아니라 **"빼면 해로운가"(LOO)**로 검증. kr 5Y/1Y는 lag/rolling 미생성이라 진짜 복원 테스트는 feature-eng 재실행 필요(TODO).
 
-**② F1 ablation 비교 단위** — walk-forward 3-fold로 3개 변수집합 비교
+**② F1 ablation — "제거가 해로운가" (순정 파이프라인)**
 
-- (A) 중간 8변수 = VIF<10 + Granger 필터 통과분 (baseline)
-- (B) **VIF 미적용 확장셋** = G2/G3 공선 변수(kr 5Y/1Y 등) + kospi 복원
-- (C) **그룹 대표 + 규제** = 각 그룹 대표 변수 + XGBoost `reg_alpha`/`reg_lambda`
-- 지표: dir acc · RMSE · DM p · interval score → **가설: (B)/(C) ≥ (A)** 면 VIF 사전 제거가 예측엔 손해였음 입증
+> eval = **16d와 동일한** XGBoost(q50)·RobustScaler·3-fold. raw셋 → `{var}__lag/__rmean/__rstd` **162공간 확장**. **모델 불변, 변수집합만 변경**(프록시 폐기 — 모델을 바꾸면 왜곡, 노트북 09 스모크에서 t-1 프록시 0.50 vs 순정 0.605로 확인).
+
+- **FULL** = 14 raw 전체(= 실제 v2). 순정 dir acc **0.605** (중간 0.6163 재현 ✓)
+- **REDUCED** = kospi(Granger p=0.57) + sp500(vix와 r=−0.73) 제거
+- **GROUPREP** = 그룹 대표 5개
+- **가설**: REDUCED < FULL 이면 **'제거가 해롭다' 실증**(교수님 F1); GROUPREP가 FULL 근접 시 '소수 대표로 충분'.
 
 **③ F2 군집 SHAP 클러스터링**
 
@@ -151,7 +153,7 @@
 - **(a) 랜덤 서브셋 벤치마크 분포**: 전체 후보 풀에서 동일 크기 부분집합을 N=300~500개 무작위 샘플 → 각각 walk-forward dir acc(또는 RMSE) 측정 → **히스토그램**. 도메인 선택셋 위치를 수직선·백분위로 표시.
 - **(b) 변수별 한계 기여 히스토그램**: leave-one-out(선택셋에서 1개 제거 시 성능 하락) + add-one-in(제외 변수 추가 시 변화) → 각 변수의 marginal value. 제외 변수가 성능을 안 올린다는 **직접 증거**.
 - ⚠️ **정직성 가드 1**: 이 분포는 **선택의 사후 정당화·검증용**이지 *선택 도구가 아님*. 최고 성능 서브셋을 골라 쓰면 data snooping (`experiments/` Path A 메타이슈와 동일). 도메인 선택을 1차로, 히스토그램은 보조 증거로만.
-- ⚠️ **정직성 가드 2 (비용)**: 분포 sweep은 **경량 프록시**(단일 XGBoost 점예측, CQR/분위수 생략)로 돌리고, 최종 선택셋만 full 파이프라인 재검증.
+- ⚠️ **정직성 가드 2 (비용)**: 분포 sweep도 **순정 파이프라인(q50·동일 fold)** N=300회로 — CPU 수 분 소요(팀 결정 '다'). 프록시로 대체하면 모델이 달라져 왜곡되므로 사용 안 함. (q50 단일 모델만 쓰므로 분위수·CQR은 생략 가능)
 - 산출: `09_feature_redesign.ipynb` 후반 + `scripts/`에 sweep 스크립트.
 
 ### 2.7 노트북 매핑 (5개)
