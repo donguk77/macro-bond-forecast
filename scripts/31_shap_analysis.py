@@ -94,7 +94,7 @@ CAT_COLORS = {
     '파생 변수': '#607D8B',
 }
 
-BASE_VARS = list(KR_LABELS.keys())
+BASE_VARS = [bv for bv in KR_LABELS.keys() if bv != 'kospi']  # v3: kospi 제외
 
 
 def get_base_var(col_name):
@@ -125,8 +125,8 @@ print('=' * 60)
 
 df = pd.read_csv(DATA_DIR / 'processed' / 'features_v2_no_leak.csv',
                  index_col='date', parse_dates=['date']).sort_index()
-FEATURE_COLS = [c for c in df.columns if c != 'delta_y_bp']
-print(f'피처 수: {len(FEATURE_COLS)}')
+FEATURE_COLS = [c for c in df.columns if c != 'delta_y_bp' and 'kospi' not in c.lower()]
+print(f'피처 수: {len(FEATURE_COLS)} (kospi 제외 = v3 변수셋)')
 
 X_tr = df.loc[FOLD3['train'][0]:FOLD3['train'][1]][FEATURE_COLS]
 X_val = df.loc[FOLD3['val'][0]:FOLD3['val'][1]][FEATURE_COLS]

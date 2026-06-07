@@ -1,0 +1,5 @@
+strategy,sharpe,CI_low,CI_high,CI_excl_0,total_%,mdd_%,win_%,active_days
+S0_BuyHold,-0.097,-0.891,0.703,False,-3.334,-25.16,50.4,1410
+S1_Full,1.476,0.666,2.294,True,50.047,-13.081,52.6,1410
+S2_Conf,1.103,0.433,1.645,True,8.06,-0.892,42.1,42
+S3_Conf_VIX,0.9,0.216,1.436,True,5.195,-0.631,42.2,24

@@ -26,7 +26,7 @@ shap>=0.44.0
 torch>=2.1.0
 # optuna>=3.5.0    # 5주차 수동 grid 5×5 사용, Optuna 는 시간 여유 시
 
-# === 7주차: 미니 데모 (필수 산출물) ===================================
-# 7주차 진입 시 주석 해제. Jupyter 메인 + Streamlit 1페이지 보조.
-# streamlit>=1.30.0
-# plotly>=5.18.0
+# === 7주차 + 기말: 미니 데모 / 라이브 대시보드 (필수 산출물) ==========
+# app/streamlit_app.py (7주 데모) · app/live_dashboard_2026.py (기말 2026 라이브 OOS)
+streamlit>=1.30.0
+plotly>=5.18.0

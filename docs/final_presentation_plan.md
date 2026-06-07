@@ -174,16 +174,23 @@
 
 ## 3. 기존 3대 기술 과제 (중간 대본 슬라이드 19 carryover)
 
-| 과제 | 중간 상태 | 기말 목표 | 핵심 산출 |
+| 과제 | 중간 상태 | 기말 결과 (실측, nb09–13 완료) | 핵심 산출 |
 |---|---|---|---|
-| T1. 예측구간 축소 + 방향 결합 | CQR이 Coverage 98.4%/폭 24.8bp로 과보정, 구간이 0을 항상 포함해 방향 정보 無 | 비대칭·국소적응 CQR + 비교차 제약으로 좁히고 방향과 결합 (§3.1) | coverage-sharpness + 0배제율 그래프 |
-| T2. 위기 전용 혼합 모델 | 트리 외삽 한계 (fold1 코로나 약세) | VIX/레짐 기반 위기 구간 전용 모델 혼합 | regime별 성능 비교표 |
-| T3. 트레이딩 백테스트 | `experiments/` 정직 결과: Pooled Sharpe 0.62(CI 0 포함) | 1bp 비용 가정 정직 alpha, 한계 명시 | walk-forward 백테스트 + CI |
-| **T3.1. 2026 라이브 OOS** (팀 보강) | 평가가 2023–2025 **종가 기준**에 한정 | 2026 신규 데이터로 **동결 모델 포워드 + 실제 수수료** (§3.2) | 라이브 dir acc·비용반영 손익 |
+| T1. 예측구간 축소 + 방향 결합 | CQR이 Coverage 98.4%/폭 24.8bp로 과보정, 구간이 0을 항상 포함해 방향 정보 無 | ⚠️ **가설 기각 (nb12, 2026-05-30)**: 고정 CQR 실패(fold3 99%/fold2 67%) → **온라인 롤링 conformal**로 해결(마진 0.905·폭 14.8·IS 20). 단 **제대로 보정하면 구간은 방향 못 줌(0배제율≈0)** → 방향 신호는 q50가 담당 (§3.1) | 온라인 conformal coverage-sharpness + "구간≠방향" 정직 결론 |
+| T2. 위기 전용 혼합/게이팅 | 트리 외삽 한계 (fold1 코로나 약세) | ⚠️ **게이팅 시도→v3엔 불필요 (scripts/39, 2026-05-30)**: 사전등록 τ=1.5+VIX<20 게이팅 Sharpe 0.90 < **매일매매(S1) 1.476**. v3 신호의 |q50|>1.5bp가 3%뿐 → 좋은 매매까지 버림. τ 낮춘 변형은 fold3 집중·fold1 악화 = **snooping**. **앙상블도 열세(Path D/A)**. → 레짐 집중은 **필터로 못 풀고 공개 한계로 보고**, T2는 향후 과제 | regime별 성능 비교표(`regime_gated_v3*`) |
+| T3. 트레이딩 백테스트 | `experiments/` 정직 결과: Pooled Sharpe 0.62(CI 0 포함) | ✅ **nb13**: 1일 방향신호 1bp 비용후 **Sharpe 1.46, CI [0.56, 2.40]**(0 초과). 단 **수익 2022–23 집중**, 2021·2025 손실 | walk-forward 백테스트 + CI |
+| **T3.1. 2026 라이브 OOS** (팀 보강) | 평가가 2023–2025 **종가 기준**에 한정 | ✅ **완료 (scripts 37·38, 2026-05-30)**: 2026 93영업일 포워드. dir **0.576**(n=92, CI [0.467, 0.674] → 0.5 포함=유의X), 진폭 DM=-3.06 **p=0.003 유의**, 백테스트 1bp 누적 +5.2%·B&H 능가하나 **2bp면 Sharpe 음수** (§3.2) | 라이브 dir acc·비용반영 손익 |
 
 > ⚠️ 정직성 원칙 유지: `experiments/README.md` 기준 누수 3회+메타 1회 자기점검 서사 계승. Path A Sharpe 2.02는 **5.5% participation 한계**를 명시(과장 금지).
+> ⚠️ **서사 정정 (중요)**: T1 "예측구간이 방향 신호를 담는다"는 **중간 차별점 가설이었으나 실측에서 기각**됨. 기말 발표의 진짜 차별점은 **① 1일 방향 엣지(간밤 US→KR 스필오버) ② 정직한 방법론(가설 기각 보존·진폭/방향 분리·온라인 conformal·라이브 OOS 한계 규명)**. 구간(CQR)은 "방향 무기"가 아니라 **"한계 규명 + 온라인 conformal 방법론 기여"**로 축소 제시.
 
 ### 3.1 T1 상세 — 예측구간 축소 + 방향 결합 (팀 보강)
+
+> ⚠️ **실측 결과 콜아웃 (nb12, 2026-05-30) — 아래 가설은 기각됨**
+> - 아래 §3.1의 접근(비대칭·국소적응 CQR로 좁혀 0을 배제 → 방향 신호화)은 **중간 발표 시점의 가설**이며, nb12 실측에서 **기각**되었다.
+> - **검증 결과**: 고정 CQR은 fold별 붕괴(fold3 coverage 99% / fold2 67%) → **온라인 롤링 conformal**로 우회해 마진 coverage 0.905·폭 14.8bp·Interval Score 20 달성. 그러나 **제대로 보정하면 0배제율 ≈ 0** — 즉 구간은 방향 정보를 담지 못한다.
+> - **정직한 결론**: *"예측구간은 불확실성 정량화(coverage)에는 성공하지만, 방향 신호는 주지 못한다. 방향은 q50(중위수 점추정)이 담당한다."* → 구간과 방향은 **분리된 산출물**.
+> - **발표 처리**: 이 절은 "차별점"이 아니라 **"가설 → 정직한 기각 + 온라인 conformal 방법론 기여"** 서사로 제시. 아래 접근 상세는 *"우리가 시도한 것"* 기록으로 보존(끼워맞추기 회피·음수 채택 원칙).
 
 **문제의 3겹 분해**
 - (a) **XGBoost 독립성**: q05/q50/q95를 **독립 모델 3개**로 학습 → 분위수 교차(q05>q50) 위험 + 세 경계가 서로·점예측과 무관하게 따로 움직임. (LSTM 공동출력은 덜 발생 → 비교 포인트)
@@ -197,7 +204,9 @@
 4. **raw 분위수 개선** — v3 변수·튜닝으로 raw coverage 90% 근접 → CQR 보정폭 자체 축소 → (b) 근본 원인 완화.
 5. **방향 결합 평가 (핵심)** — 폭만 보지 말고 **"구간이 0을 배제하는 비율"**(=신뢰 방향 신호) + 부호/레짐별 conditional coverage를 지표화. 좁아진 구간이 한쪽(>0 또는 <0)에 온전히 위치하면 그때 방향 정보를 담음 → (c) "방향 잡으면 범위도 바뀐다"의 정량화.
 
-> 시작점: 중간 준비 산출물 `quantile_v3_asymmetry*.png`, `interval_asymmetry_analysis.png`, `scripts/29_quantile_improvement.py`, `reports/no_leak_v2/quantile_v3_comparison.csv` 위에 확장. 핵심 메시지: *"현재 구간은 0을 항상 포함해 무의미. 비대칭·국소적응 CQR + 비교차 제약으로 좁히면, 좁아진 구간이 방향 신호 자체를 담는다."*
+> 시작점: 중간 준비 산출물 `quantile_v3_asymmetry*.png`, `interval_asymmetry_analysis.png`, `scripts/29_quantile_improvement.py`, `reports/no_leak_v2/quantile_v3_comparison.csv` 위에 확장.
+> ~~핵심 메시지(중간 가설): "비대칭·국소적응 CQR로 좁히면 좁아진 구간이 방향 신호 자체를 담는다."~~ → **기각 (상단 콜아웃 참조)**.
+> **정정된 핵심 메시지**: *"비대칭·국소적응·온라인 conformal로 구간을 제대로 보정하는 데는 성공했지만(마진 coverage 0.905), 정직하게 보정하면 구간은 0을 배제하지 못한다(0배제율≈0) — 즉 구간은 방향을 주지 못하며, 방향은 q50가 담당한다. 이 분리 자체가 정직한 발견."*
 
 **왜 지금 구간이 "직선"처럼 보이나 + 가변폭이 타당한가**
 
@@ -209,6 +218,14 @@
 - **사전 진단 (노트북 12 첫 셀)**: 현재 구간폭의 **시계열**을 그려 실현 변동성과 상관 확인. 2020(코로나)·2022(인상기) 고변동기에도 폭이 평탄하면 → "직선" 가설 확증 + 가변폭 동기 입증. **기대치**: 일별 wiggle이 아니라 **레짐별(위기↔안정) 확대/축소**가 정상(과한 변동은 과적합 의심).
 
 ### 3.2 T3.1 — 2026 라이브 OOS 포워드 검증 (팀 보강)
+
+> ✅ **완료 콜아웃 (scripts 37·38, `reports/no_leak_v2/live_oos_2026_xgb.csv`, 2026-05-30)**
+> - 데이터 2026-05-22까지 재수집(전 출처), v3 피처 재생성(과거 구간 백업과 값 동일 검증), 동결 모델(train≤2024·val 2025·cal 2025H2) → 2026 **93영업일** 포워드.
+> - **방향(정직)**: dir acc **0.576** (n=92), 부트 95%CI **[0.467, 0.674] → 0.5 포함 = 통계적 유의성 미확보**. in-sample 0.621보다 하락. 시드 5개 전부 0.5761(결정론적).
+> - **진폭**: DM vs naive(제곱오차) **DM=-3.06, p=0.003 유의** (RMSE 5.58 < 5.90) — 진폭은 2026에 오히려 naive 능가.
+> - **백테스트 1bp**: 누적 **+5.2%**, Sharpe 1.96이나 95%CI **[-1.33, 5.90] → 0 포함**. B&H(-4.4%)는 능가(추세장). **비용 sweep: 2bp면 Sharpe 음수**(회전 118%).
+> - **구간(온라인 conformal)**: coverage 0.84, 0배제율 0.0.
+> - **한 줄(과장 금지)**: *라이브에서 방향 엣지는 방향 일관(>0.5·B&H 능가)이나 소표본(n=92)·비용 민감으로 통계적 유의성 확보 실패.* → 아래 계획 텍스트의 "약 60거래일" 등은 실제 93영업일로 수행됨.
 
 **동기**: 현재 성능평가는 2023–2025 test(**종가 기준 체결 가정**)에 한정. 개발 중 test 반복 참조 가능성 + 종가 체결의 비현실성을 보완하기 위해, **학습에 전혀 안 쓰인 2026년 최근 ~3개월(약 60거래일)** 데이터를 신규 수집해 **동결된 v3 모델로 순수 포워드 예측 + 실제 수수료 반영 시뮬레이션**.
 
@@ -249,11 +266,15 @@
 |---|---|---|---|
 | 1 | **브릿지**: 중간 요약 + 받은 피드백 | 반복(최소) | **1장** — 무엇을 예측/어디까지 했나 + 교수님 피드백 핵심 → "이제 그 답을 보여드립니다" |
 | 2 | 변수 선택 재설계 (그룹핑 + 성능분포 ⑥) | 신규 | 피드백 직접 응답(F1·F3·F4). **SHAP 경량 1~2장은 여기에만**(선택 근거용) |
-| 3 | 예측구간 개선 §3.1 (방향 결합) | 신규 | 0배제율 — "방향 신호를 담는 구간" |
+| 3 | 예측구간 §3.1 (가설 기각 + 온라인 conformal) | 신규 | "구간은 불확실성은 주지만 방향은 못 준다(0배제율≈0)" — 정직한 분리, 온라인 conformal 방법론 기여 |
 | 4 | v3 결과 + XGBoost/LSTM 비교 | 신규/갱신 | DM test, ablation |
 | 5 | **백테스트 2023–2025 수익률** | 신규·강조 | next-open·수수료 반영 정직 alpha |
+| 5b | **거래비용·체결 현실** | 신규·강조 | overnight 갭·손익분기 3.7bp — "예측 정확도 ≠ 수익성" |
+| 5c | **회전율 축소** (2026-05-31) | 신규 | 저빈도화 점추정↑(8→16%)·승률↑(0.52→0.74)이나 유의성 미달(부트 CI 0 포함) |
 | 6 | **2026 라이브 OOS 결과** | 신규·강조 | 진짜 OOS — 라이브 sanity-check |
 | 7 | **응용·웹 — 누구에게 어떤 도움** | 신규·마무리 | 데모 웹 시연 + 타깃 사용자·가치 |
+
+> ⚠️ 블록 5b·5c는 본 발표의 정직성 핵심(거래현실 규명). 블록 5(백테스트)→5b(비용)→5c(회전율) 순으로 "수익→현실 마찰→완화 시도" 흐름.
 
 > **타깃 사용자(예시, 팀 확정 필요)**: 채권 투자자·트레이더(방향 + 리스크 구간), 리스크관리자(예측구간 폭), 개인투자자(국고채 ETF 진입 의사결정 보조).
 > ⚠️ 새 청중/자기완결 요구가 있으면 브릿지를 2~3장으로 확장. 누수 발견은 강한 정직성 자산이므로 브릿지의 "지난 성과" 한 줄로 보존.
@@ -300,3 +321,52 @@
 - `docs/` 피치덱 중복 PDF: 구버전(49MB) → `_archive/midterm_assets/pitch_deck_v1_2026-05-26.pdf`, 최신본 → `docs/pitch_deck_midterm.pdf`로 정리
 - v1 발표 대본 `docs/midterm_presentation_script.md` → `_archive/midterm_assets/midterm_presentation_script_v1.md`
 - 현행 자료: 대본 `docs/midterm_presentation_script_v2.{md,docx,pdf}`, 슬라이드 콘텐츠 `docs/midterm_presentation.{md,docx,pdf}` 유지
+
+---
+
+## 10. 발표 블록 ↔ 이미지 매핑 (실측, 2026-05-31)
+
+> §5 발표 구성안(7블록)에 실제 존재하는 그림을 매핑. 경로는 `reports/figures/` 기준.
+
+| 블록 | 내용 | 사용 그림 (실존) | 상태 |
+|---|---|---|---|
+| 1 브릿지 | 중간요약+피드백+누수 | `improved/v0_v1_leakage_fix_improved.png` | ✅ |
+| 2 변수선택 재설계 | 그룹핑·ablation·성능분포·SHAP 근거 | `v3/09_ablation.png`, `v3/09_loo.png`, `v3/09_random_subset_hist.png`, `improved/shap_group_importance.png`, `improved/shap_beeswarm_top15.png`, `improved/derived_features_validation_13vars.png` | ✅ |
+| 3 예측구간 | 고정CQR 붕괴→온라인 conformal | `v3/12_perfold_coverage.png`, `v3/12_online_vs_static_fold3.png`, `v3/12_online_solution.png`, `v3/12_width_diagnostic.png` (+`improved/quantile_v3_directional.png`) | ✅ |
+| 4 v3 결과·모델비교 | RMSE↔방향·DM | `v3/11_rmse_vs_diracc.png` (DM은 표) | ✅ |
+| 5 백테스트 23–25 | Sharpe·연도 안정성 | `v3/13_equity_curve.png`, `v3/13_yearly_stability.png` | ✅ |
+| 5b 거래비용·체결 | overnight갭·손익분기 | `execution_cost_reality.png` | ✅ |
+| 5c 회전율 축소 | 점추정↑·유의성 미달 | `turnover_reduction.png` | ✅ (신규 5/31) |
+| 6 2026 라이브 OOS | 방향 0.576·비용 민감 | ❌ **없음** | **생성 필요** |
+| 7 응용·웹 | 데모 시연 | 데모앱 스크린샷(라이브) | ⚠️ 캡처 필요 |
+
+### 10.1 SHAP 그림 — 이미 존재 (별도 생성 불필요)
+`reports/figures/improved/` 에 6종 존재: `shap_group_importance.png`, `shap_beeswarm_top15.png`, `shap_summary_top20.png`, `shap_dependence_top6.png`, `shap_feature_type.png`, `shap_temporal_top5.png`. → 블록2에서 **재사용**. (v3 변수셋 기준 재생성을 원할 때만 `scripts/31_shap_analysis.py`.)
+
+### 10.2 진짜 누락 — 작성/생성 필요 (우선순위)
+1. **블록6 — 2026 라이브 OOS 그림** ❗ : `reports/no_leak_v2/live_oos_2026_xgb.csv`로 생성. (예측 vs 실현 방향, 비용반영 누적손익, 구간 coverage) — "신규·강조" 블록인데 비주얼이 없음 = 최우선.
+2. **블록7 — 데모 앱 스크린샷** : `streamlit run app/demo_app.py` 실행 후 캡처.
+3. (선택) 블록4 DM test 비교 시각화 — 표로 대체 가능.
+
+### 10.3 v3 그림 인벤토리 전체 (`reports/figures/v3/`, `improved/`)
+- **v3/** (10): `09_ablation`, `09_loo`, `09_random_subset_hist`, `11_rmse_vs_diracc`, `12_online_solution`, `12_online_vs_static_fold3`, `12_perfold_coverage`, `12_width_diagnostic`, `13_equity_curve`, `13_yearly_stability`
+- **improved/ 주요**: SHAP 6종, `quantile_v3_*`(7), `interval_asymmetry_analysis`, `interval_score_comparison`, `derived_features_*`(2), `auto_arima_*`, baseline 계열
+- **루트 신규**: `execution_cost_reality.png`(5/30), `turnover_reduction.png`(5/31)
+- ⚠️ 루트의 `w2~w7_*`, `01~05_*`, `auto_*` 는 **중간발표(v2) 산출물** — 기말 본편엔 원칙적으로 미사용(브릿지/부록만).
+
+---
+
+## 11. 웹앱 2종 구성 (2026-05-31 확정)
+
+발표 블록7 "응용·웹"은 **2개 앱**으로 역할 분리:
+
+| 앱 | 역할 | 타깃 | 상태 |
+|---|---|---|---|
+| `app/forecast_app.py` | **사용자용 예측 도구** (설계서 `risk_dashboard_design.md` v2 구현) | 채권 데스크 / 트레저리·리스크 담당 (전문가) | ✅ MVP 구현 (2026-05-31) |
+| `app/demo_app.py` | **검증/근거 대시보드** (성과·비용·세금 분석) | 평가자(교수님) | ✅ 보존 |
+
+- **forecast_app (신규)**: 한 번의 Δy 예측 → 이중 co-primary = ① 방향/거래 신호 sign(q50) ② 불확실성 구간(online conformal). bp↔듀레이션 VaR(D≈8) 토글, 최신 예측(현 MVP=`live_oos_2026_xgb.csv` 마지막 행, 2026-05-22 기준), 라이브 누적손익, **정직 성능 고지(in-sample vs 라이브)** 표, 간밤 글로벌 동인(expander). 정직성 라벨 상시(추세장 한정·유의성 없음·2bp 상쇄·위기 첫날 과소).
+  - 실행: `.venv\Scripts\streamlit run app/forecast_app.py`
+  - 한계(현 MVP): 모델 동결(freeze) 직렬화 미구현 → 진짜 "내일" 예측이 아니라 최신 가용 예측 1건 표시. v1에서 freeze + 자동 갱신.
+- **발표 시연 동선**: forecast_app("사용자가 이렇게 쓴다")로 시작 → demo_app("그 신호가 비용·세금 넣으면 이렇다, 정직하게")로 검증. "예측 정확도 ≠ 거래 수익성" 메시지를 두 앱으로 입증.
+- 블록7 그림 자산: 두 앱 스크린샷 각 1장 필요(캡처 TODO).

@@ -70,3 +70,18 @@ desktop.ini
 # Streamlit
 # ====================================================================
 .streamlit/secrets.toml
+
+# ====================================================================
+# Cloudinary — API secret 평문 포함, 커밋 금지 (rotate 권장)
+# ====================================================================
+scripts/cloudinary_upload_charts.py
+scripts/cloudinary_urls.json
+scripts/_cloud_relabel_urls.json
+
+# ====================================================================
+# 임시 검증·미리보기 파일
+# ====================================================================
+scripts/_*.py
+app/_forecast_log.txt
+_*.png
+reports/figures/**/_preview_*.png

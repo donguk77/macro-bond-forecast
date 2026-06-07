@@ -1,0 +1,2 @@
+C:\Users\dongs\Desktop\머신러닝\머신러닝 기말 팀플\macro-bond-forecast\.venv\Scripts\python.exe: can't open file 'C:\\Users\\dongs\\Desktop\\머신러닝\\머신러닝 기말 팀플\\macro-bond-forecast\\scripts\\41_turnover_reduction.py': [Errno 2] No such file or directory
+exit=2

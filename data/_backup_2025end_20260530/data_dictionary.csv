@@ -1,0 +1,25 @@
+﻿variable,category,description,source,code,frequency
+kr_treasury_10y,타겟,국고채 10년물,ECOS,817Y002/010210000,D
+kr_treasury_5y,국내금리,국고채 5년물,ECOS,817Y002/010200001,D
+kr_treasury_3y,국내금리,국고채 3년물,ECOS,817Y002/010200000,D
+kr_treasury_1y,국내금리,국고채 1년물,ECOS,817Y002/010190000,D
+kr_corp_aa3y,국내금리,회사채 AA- 3년,ECOS,817Y002/010300000,D
+kr_cd_91d,국내금리,CD 91일,ECOS,817Y002/010502000,D
+kr_base_rate,국내금리,한국은행 기준금리,ECOS,722Y001/0101000,D
+krw_usd,검증용,원/달러 환율 종가,ECOS,731Y001/0000001,D
+kr_cpi,국내인플,소비자물가지수 총지수,ECOS,901Y009/0,M
+kr_cpi_core,국내인플,근원 CPI (농산물 및 석유류 제외),ECOS,901Y010/QB,M
+kr_ppi,국내인플,생산자물가지수 총지수,ECOS,404Y014/*AA,M
+kr_industrial_prod,국내실물,산업생산지수(전산업),ECOS,901Y033/A00,M
+kr_mfg_bsi_outlook,국내실물,제조업 업황전망 BSI,ECOS,512Y014/C0000/BA,M
+us_treasury_10y,미국금리,미국 10년물 국채금리,FRED,DGS10,D
+us_treasury_2y,미국금리,미국 2년물 국채금리,FRED,DGS2,D
+us_fed_funds,미국금리,연방기금금리(실효),FRED,DFF,D
+us_breakeven_10y,미국인플,미국 10년 BEI(기대인플레),FRED,T10YIE,D
+us_cpi,미국인플,미국 CPI(계절조정),FRED,CPIAUCSL,M
+vix,위험,VIX 변동성지수,FRED,VIXCLS,D
+us_credit_spread,위험,Moody's Baa 회사채 - 미국 10y 스프레드 (신용위험),FRED,BAA10Y,D
+wti_oil,원자재,WTI 유가,FRED,DCOILWTICO,D
+dxy,글로벌달러,"달러 인덱스 (Broad, Goods & Services)",FRED,DTWEXBGS,D
+kospi,자산,KOSPI 종합지수,yfinance,^KS11,D
+sp500,자산,S&P500 지수,yfinance,^GSPC,D

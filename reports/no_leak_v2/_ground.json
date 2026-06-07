@@ -1,0 +1,34 @@
+{
+ "iv_rows": 1410,
+ "iv_folds": [
+  "fold1",
+  "fold2",
+  "fold3"
+ ],
+ "iv_range": [
+  "2020-01-02",
+  "2025-12-30"
+ ],
+ "fold3_rows": 701,
+ "fold3_range": [
+  "2023-01-03",
+  "2025-12-30"
+ ],
+ "live_rows": 93,
+ "live_range": [
+  "2026-01-02",
+  "2026-05-22"
+ ],
+ "etf_rows": 811,
+ "etf_range": [
+  "2023-01-02",
+  "2026-05-29"
+ ],
+ "etf_dupdates": 0,
+ "merge_allfolds": 776,
+ "merge_fold3": 776,
+ "post2023_fold_counts": {
+  "fold3": 701
+ },
+ "post2023_dup_dates_across_folds": 0
+}

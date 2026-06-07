@@ -79,7 +79,7 @@ def _check_keys():
 
 # --- 수집 기간 -------------------------------------------------------
 START_DATE = "2010-01-01"
-END_DATE = "2025-12-31"
+END_DATE = "2026-05-30"  # 2026 라이브 OOS 위해 확장 (구 2025-12-31)
 
 ECOS_DAILY_START = START_DATE.replace("-", "")
 ECOS_DAILY_END = END_DATE.replace("-", "")
